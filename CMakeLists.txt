@@ -10,13 +10,13 @@ find_package(catkin REQUIRED COMPONENTS
     geometry_msgs
 )
 
-add_definitions(-std=c++11)
-
 find_package(cmake_modules REQUIRED)
 
 catkin_package(
    INCLUDE_DIRS include
+   LIBRARIES mmuav_impedance_control yaml-cpp
    CATKIN_DEPENDS roscpp rospy roslib rospack
+   DEPENDS system_lib
 )
 
 include_directories(
