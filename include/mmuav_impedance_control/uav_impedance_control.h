@@ -4,9 +4,7 @@
 #include "ros/ros.h"
 #include <mmuav_impedance_control/Tf2.h>
 #include <mmuav_impedance_control/diff2.h>
-#include <rosgraph_msgs/Clock.h>
 #include <geometry_msgs/WrenchStamped.h>
-#include <rosgraph_msgs/Clock.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <std_msgs/Float64.h>
 #include <mmuav_impedance_control/mraic.h>
@@ -17,7 +15,6 @@
 class ImpedanceControl{
 	private:
 		void force_measurement_cb(const geometry_msgs::WrenchStamped &msg);
-		void clock_cb(const rosgraph_msgs::Clock &msg);
 		void pose_ref_cb(const geometry_msgs::PoseStamped &msg);
 		void force_torque_cb(const geometry_msgs::WrenchStamped &msg);
 		void initializeImpedanceFilterTransferFunction(void);
@@ -49,7 +46,6 @@ class ImpedanceControl{
 		float torque_y_offset_, torque_x_offset_, torque_z_offset_;
 		int rate_, moving_average_sample_number_, targetImpedanceType_;
 
-		rosgraph_msgs::Clock clock_;
 		geometry_msgs::PoseStamped pose_ref_;
 		geometry_msgs::WrenchStamped force_torque_ref_;
 		std_msgs::Float64 yaw_ref_;
@@ -57,7 +53,7 @@ class ImpedanceControl{
 
 		ros::NodeHandle n_;
 
-		ros::Subscriber force_ros_sub_, clock_ros_sub_;
+		ros::Subscriber force_ros_sub_;
 		ros::Subscriber force_torque_ref_ros_sub_, pose_ref_ros_sub_;
 
 		ros::Publisher force_filtered_pub_, pose_commanded_pub_;

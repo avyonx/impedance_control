@@ -52,7 +52,6 @@ ImpedanceControl::ImpedanceControl(int rate, int moving_average_sample_number)
 	force_ros_sub_ = n_.subscribe("/force_sensor/ft_sensor", 1, &ImpedanceControl::force_measurement_cb, this);
     pose_ref_ros_sub_ = n_.subscribe("impedance_control/pose_ref", 1, &ImpedanceControl::pose_ref_cb, this);
     force_torque_ref_ros_sub_ = n_.subscribe("impedance_control/force_torque_ref", 1, &ImpedanceControl::force_torque_cb, this);
-	clock_ros_sub_ = n_.subscribe("/clock", 1, &ImpedanceControl::clock_cb, this);
 
 	force_filtered_pub_ = n_.advertise<geometry_msgs::WrenchStamped>("/force_sensor/filtered_ft_sensor", 1);
     pose_commanded_pub_ = n_.advertise<geometry_msgs::PoseStamped>("impedance_control/pose_command", 1); 
@@ -264,11 +263,6 @@ bool ImpedanceControl::check_impact(void)
 	return impact_flag_;
 }
 
-void ImpedanceControl::clock_cb(const rosgraph_msgs::Clock &msg)
-{
-    clock_ = msg;
-}
-
 float ImpedanceControl::getFilteredForceX(void)
 {
     float sum = 0;
@@ -349,11 +343,10 @@ float ImpedanceControl::getFilteredTorqueZ(void)
 
 void ImpedanceControl::run()
 {
-	float dt = 0;
+	double dt = 0, time_old = 0;
     float *xc, *xr;
     float vector_pose_ref[6] = {0};
 
-	rosgraph_msgs::Clock clock_old;
 	geometry_msgs::WrenchStamped filtered_ft_sensor_msg;
     geometry_msgs::PoseStamped commanded_position_msg;
     std_msgs::Float64 commanded_yaw_msg;
@@ -369,13 +362,6 @@ void ImpedanceControl::run()
     float torque_z_sum = 0;
 
     ros::Rate loop_rate(rate_);
-
-    while (ros::Time::now().toSec() == 0 && ros::ok())
-    {
-        ROS_INFO("Waiting for clock server to start");
-    }
-
-    ROS_INFO("Received first clock message");
 
     while (!start_flag_ && ros::ok())
     {
@@ -428,8 +414,6 @@ void ImpedanceControl::run()
 
     ROS_INFO("Starting impedance control.");
 
-    clock_old = clock_;
-
     initializeImpedanceFilterTransferFunction();
     initializeMRACControl();
 
@@ -439,11 +423,12 @@ void ImpedanceControl::run()
 
         if ((counter % moving_average_sample_number_) == 0)
         {
-            dt = (clock_.clock.toSec() - clock_old.clock.toSec());
-            clock_old = clock_;
+            dt = ros::Time::now().toSec() - time_old;
+            time_old = ros::Time::now().toSec();
 
-        	if (dt > 0.0)
-			{
+            if (dt > 0.0)
+            {
+
                 fe_[2] = -(force_torque_ref_.wrench.force.z - getFilteredForceZ()); //ide -e iz razloga jer je force senzor rotiran s obzirom na koordinatni letjlice
                 fe_[3] = 0;//-(force_torque_ref_.wrench.torque.y - getFilteredTorqueY());
                 fe_[4] = 0;//-(force_torque_ref_.wrench.torque.x - getFilteredTorqueX());
@@ -476,17 +461,17 @@ void ImpedanceControl::run()
 
                 // Publishing filtered force sensor data
                 filtered_ft_sensor_msg.header.stamp = ros::Time::now();
-				filtered_ft_sensor_msg.wrench.force.z = getFilteredForceZ();
+    			filtered_ft_sensor_msg.wrench.force.z = getFilteredForceZ();
                 filtered_ft_sensor_msg.wrench.force.y = getFilteredForceY();
                 filtered_ft_sensor_msg.wrench.force.x = getFilteredForceX();
                 filtered_ft_sensor_msg.wrench.torque.x = getFilteredTorqueX();
                 filtered_ft_sensor_msg.wrench.torque.y = getFilteredTorqueY();
                 filtered_ft_sensor_msg.wrench.torque.z = getFilteredTorqueZ();
-				force_filtered_pub_.publish(filtered_ft_sensor_msg);
+    			force_filtered_pub_.publish(filtered_ft_sensor_msg);
 
                 free(xc);
                 free(xr);
-			}
+            }
 
         	counter = 0;
         }
