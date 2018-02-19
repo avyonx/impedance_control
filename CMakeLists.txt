@@ -34,8 +34,11 @@ target_link_libraries(Tf1 ${catkin_LIBRARIES})
 add_library(diff2 src/diff2.cpp)
 target_link_libraries(diff2 ${catkin_LIBRARIES})
 
+add_library(median_filter src/median_filter.cpp)
+target_link_libraries(median_filter ${catkin_LIBRARIES})
+
 add_library(mraic src/mraic.cpp)
 target_link_libraries(mraic ${catkin_LIBRARIES} diff2 Tf2 Tf1)
 
-add_executable(uav_impedance_control src/uav_impedance_control.cpp)
-target_link_libraries(uav_impedance_control ${catkin_LIBRARIES} yaml-cpp mraic)
+add_executable(impedance_control src/impedance_control.cpp)
+target_link_libraries(impedance_control ${catkin_LIBRARIES} yaml-cpp mraic median_filter)

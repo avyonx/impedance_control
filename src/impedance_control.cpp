@@ -1,13 +1,24 @@
-#include <mmuav_impedance_control/uav_impedance_control.h>
+#include <mmuav_impedance_control/impedance_control.h>
 #include <ros/package.h>
 #include "yaml-cpp/yaml.h"
 #include <mmuav_impedance_control/Tf1.h>
 
-ImpedanceControl::ImpedanceControl(int rate, int moving_average_sample_number)
+ImpedanceControl::ImpedanceControl(int rate, int moving_average_sample_number, int median_filter_size)
 {
     int i;
 
-    for (i = 0; i < MAX_MOVING_AVARAGE_SAMPLES_NUM; i++)
+    force_z_meas_ = new float[moving_average_sample_number];
+    force_x_meas_ = new float[moving_average_sample_number];
+    force_y_meas_ = new float[moving_average_sample_number];
+    torque_x_meas_ = new float[moving_average_sample_number];
+    torque_y_meas_ = new float[moving_average_sample_number];
+    torque_z_meas_ = new float[moving_average_sample_number];
+
+    force_z_med_filt.init(median_filter_size);
+    force_x_med_filt.init(median_filter_size);
+    force_y_med_filt.init(median_filter_size);
+
+    for (i = 0; i < moving_average_sample_number; i++)
     {
         force_z_meas_[i] = 0;
         force_x_meas_[i] = 0;
@@ -49,7 +60,7 @@ ImpedanceControl::ImpedanceControl(int rate, int moving_average_sample_number)
 	moving_average_sample_number_ = moving_average_sample_number;
 	rate_ = rate;
 
-	force_ros_sub_ = n_.subscribe("/force_sensor/ft_sensor", 1, &ImpedanceControl::force_measurement_cb, this);
+	force_ros_sub_ = n_.subscribe("/optoforce_node/OptoForceWrench", 1, &ImpedanceControl::force_measurement_cb, this);
     pose_ref_ros_sub_ = n_.subscribe("impedance_control/pose_ref", 1, &ImpedanceControl::pose_ref_cb, this);
     force_torque_ref_ros_sub_ = n_.subscribe("impedance_control/force_torque_ref", 1, &ImpedanceControl::force_torque_cb, this);
 
@@ -66,6 +77,12 @@ ImpedanceControl::ImpedanceControl(int rate, int moving_average_sample_number)
     impact_flag_ = false;
     collision_ = false;
 
+}
+
+ImpedanceControl::~ImpedanceControl()
+{
+    delete[] force_z_meas_, force_y_meas_, force_x_meas_;
+    delete[] torque_z_meas_, torque_y_meas_, torque_x_meas_;
 }
 
 void ImpedanceControl::setImpedanceFilterMass(float *mass)
@@ -214,9 +231,9 @@ void ImpedanceControl::force_measurement_cb(const geometry_msgs::WrenchStamped &
         torque_z_meas_[i] = torque_z_meas_[i+1];
     }
 
-	force_z_meas_[moving_average_sample_number_-1] = msg.wrench.force.z;
-    force_x_meas_[moving_average_sample_number_-1] = msg.wrench.force.x;
-    force_y_meas_[moving_average_sample_number_-1] = msg.wrench.force.y;
+	force_z_meas_[moving_average_sample_number_-1] = force_z_med_filt.filter(msg.wrench.force.z);
+    force_x_meas_[moving_average_sample_number_-1] = force_x_med_filt.filter(msg.wrench.force.x);
+    force_y_meas_[moving_average_sample_number_-1] = force_y_med_filt.filter(msg.wrench.force.y);
     torque_x_meas_[moving_average_sample_number_-1] = msg.wrench.torque.x;
     torque_y_meas_[moving_average_sample_number_-1] = msg.wrench.torque.y;
     torque_z_meas_[moving_average_sample_number_-1] = msg.wrench.torque.z;
@@ -291,15 +308,15 @@ float ImpedanceControl::getFilteredForceY(void)
 
 float ImpedanceControl::getFilteredForceZ(void)
 {
-	float sum = 0;
-	float average;
+    float sum = 0;
+    float average;
 
-	for (int i = 0; i<moving_average_sample_number_; i++)
-		sum += force_z_meas_[i];
+    for (int i = 0; i<moving_average_sample_number_; i++)
+        sum += force_z_meas_[i];
 
-	average = sum/moving_average_sample_number_ - force_z_offset_;
+    average = sum/moving_average_sample_number_ - force_z_offset_;
 
-	return average;
+    return average;
 }
 
 float ImpedanceControl::getFilteredTorqueX(void)
@@ -557,17 +574,18 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "impedance_control_node");
     ros::NodeHandle private_node_handle_("~");
 
-    int rate, impedanceType, masn;
+    int rate, impedanceType, masn, mfs;
     std::string impedance_control_config_file;
 
     std::string path = ros::package::getPath("mmuav_impedance_control");
 
-    private_node_handle_.param("rate", rate, int(1000));
-    private_node_handle_.param("moving_average_sample_number", masn, int(10));
+    private_node_handle_.param("rate", rate, int(100));
+    private_node_handle_.param("moving_average_sample_number", masn, int(1));
+    private_node_handle_.param("median_filter_size", mfs, int(5));
     private_node_handle_.param("impedance_control_params_file", impedance_control_config_file, std::string("/config/impedance_control_params.yaml"));
     private_node_handle_.param("ImpedanceType", impedanceType, int(1));
 
-    ImpedanceControl impedance_control(rate, masn);
+    ImpedanceControl impedance_control(rate, masn, mfs);
 
     impedance_control.LoadImpedanceControlParameters(path+impedance_control_config_file);
     impedance_control.setTargetImpedanceType(impedanceType);
