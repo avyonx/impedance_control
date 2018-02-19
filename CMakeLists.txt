@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
     std_msgs
     dynamic_reconfigure
     geometry_msgs
+    trajectory_msgs
 )
 
 add_compile_options(-std=c++11)

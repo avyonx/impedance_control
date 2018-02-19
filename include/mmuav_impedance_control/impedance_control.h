@@ -8,7 +8,9 @@
 #include <geometry_msgs/WrenchStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <std_msgs/Float64.h>
+#include <std_srvs/SetBool.h>
 #include <mmuav_impedance_control/mraic.h>
+#include <trajectory_msgs/MultiDOFJointTrajectory.h>
 
 
 class ImpedanceControl{
@@ -16,6 +18,8 @@ class ImpedanceControl{
 		void force_measurement_cb(const geometry_msgs::WrenchStamped &msg);
 		void pose_ref_cb(const geometry_msgs::PoseStamped &msg);
 		void force_torque_cb(const geometry_msgs::WrenchStamped &msg);
+		void uav_current_reference_cb(const trajectory_msgs::MultiDOFJointTrajectory &msg);
+		bool start_impedance_control_cb(std_srvs::SetBool::Request  &req, std_srvs::SetBool::Response &res);
 		void initializeImpedanceFilterTransferFunction(void);
 		float getFilteredForceZ(void);
 		float getFilteredForceX(void);
@@ -27,10 +31,12 @@ class ImpedanceControl{
 		bool check_impact(void);
 		float* impedanceFilter(float *e, float *Xr);
 		float* modelReferenceAdaptiveImpedanceControl(float dt, float *e, float *g0);
+		void setImpedanceFilterInitialValue(float *initial_values);
 		void quaternion2euler(float *quaternion, float *euler);
 		void initializeMRACControl(void);
 
-		volatile bool start_flag_, force_sensor_calibration_flag_;
+		volatile bool force_start_flag_, force_sensor_calibration_flag_;
+		volatile bool impedance_start_flag_, uav_current_reference_flag_;
 		bool impact_flag_, collision_;
 		float *force_x_meas_;
 		float *force_z_meas_;
@@ -49,15 +55,18 @@ class ImpedanceControl{
 
 		geometry_msgs::PoseStamped pose_ref_;
 		geometry_msgs::WrenchStamped force_torque_ref_;
+		trajectory_msgs::MultiDOFJointTrajectoryPoint uav_current_ref_;
 		std_msgs::Float64 yaw_ref_;
 		std::string x_c_ros_topic_;
 
 		ros::NodeHandle n_;
 
-		ros::Subscriber force_ros_sub_;
+		ros::Subscriber force_ros_sub_, uav_current_reference_ros_sub_;
 		ros::Subscriber force_torque_ref_ros_sub_, pose_ref_ros_sub_;
 
 		ros::Publisher force_filtered_pub_, pose_commanded_pub_;
+
+		ros::ServiceServer start_impedance_control_ros_srv_;
 
 		Tf2 Ge_[6], Gxr_[6];
 		mraic mraic_[6];

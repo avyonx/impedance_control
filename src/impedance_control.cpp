@@ -55,14 +55,19 @@ ImpedanceControl::ImpedanceControl(int rate, int moving_average_sample_number, i
         zeta_[i] = 0;
     }
 
-	start_flag_ = false;
+	force_start_flag_ = false;
+    impedance_start_flag_ = false;
     force_sensor_calibration_flag_ = false;
+    uav_current_reference_flag_ = false;
 	moving_average_sample_number_ = moving_average_sample_number;
 	rate_ = rate;
 
 	force_ros_sub_ = n_.subscribe("/optoforce_node/OptoForceWrench", 1, &ImpedanceControl::force_measurement_cb, this);
     pose_ref_ros_sub_ = n_.subscribe("impedance_control/pose_ref", 1, &ImpedanceControl::pose_ref_cb, this);
     force_torque_ref_ros_sub_ = n_.subscribe("impedance_control/force_torque_ref", 1, &ImpedanceControl::force_torque_cb, this);
+    uav_current_reference_ros_sub_ = n_.subscribe("command/current_reference", 1, &ImpedanceControl::uav_current_reference_cb, this);
+
+    start_impedance_control_ros_srv_ = n_.advertiseService("start_impedance_control", &ImpedanceControl::start_impedance_control_cb, this);
 
 	force_filtered_pub_ = n_.advertise<geometry_msgs::WrenchStamped>("/force_sensor/filtered_ft_sensor", 1);
     pose_commanded_pub_ = n_.advertise<geometry_msgs::PoseStamped>("impedance_control/pose_command", 1); 
@@ -123,6 +128,23 @@ void ImpedanceControl::initializeMRACControl(void)
         mraic_[i].initializeAdaptationLaws(a, b, c, sigma, samplingTime);
         mraic_[i].setWeightingFactors(wp_[i], wd_[i]);
     }
+}
+
+void ImpedanceControl::setImpedanceFilterInitialValue(float *initial_values)
+{
+    int i, j;
+    float y0[3], x0[3]; 
+
+    for (i = 0; i < 6; i++)
+    {
+        for (j= 0; j < 3; j++)
+        {
+            y0[j] = initial_values[i];
+            x0[j] = initial_values[i];
+        }
+        Gxr_[i].setInitialValues(y0, x0);
+    }
+
 }
 
 void ImpedanceControl::initializeImpedanceFilterTransferFunction(void)
@@ -219,7 +241,7 @@ void ImpedanceControl::setTargetImpedanceType(int type)
 
 void ImpedanceControl::force_measurement_cb(const geometry_msgs::WrenchStamped &msg)
 {
-	if (!start_flag_) start_flag_ = true;
+	if (!force_start_flag_) force_start_flag_ = true;
 
 	for (int i=0; i<(moving_average_sample_number_-1); i++)
 	{
@@ -237,6 +259,47 @@ void ImpedanceControl::force_measurement_cb(const geometry_msgs::WrenchStamped &
     torque_x_meas_[moving_average_sample_number_-1] = msg.wrench.torque.x;
     torque_y_meas_[moving_average_sample_number_-1] = msg.wrench.torque.y;
     torque_z_meas_[moving_average_sample_number_-1] = msg.wrench.torque.z;
+}
+
+bool ImpedanceControl::start_impedance_control_cb(std_srvs::SetBool::Request  &req,
+    std_srvs::SetBool::Response &res)
+{
+    bool service_flag = false;
+    float initial_values[6];
+
+    initial_values[0] = 0.0;//uav_current_ref_.transforms[0].translation.x;
+    initial_values[1] = 0.0;//uav_current_ref_.transforms[0].translation.y;
+    initial_values[2] = uav_current_ref_.transforms[0].translation.z;
+    initial_values[3] = 0.0;
+    initial_values[4] = 0.0;
+    initial_values[5] = 0.0;
+
+    pose_ref_.pose.position.z = uav_current_ref_.transforms[0].translation.z;
+
+    if (req.data && uav_current_reference_flag_ && !impedance_start_flag_)
+    {
+        ROS_INFO("Starting impedance control.");
+        setImpedanceFilterInitialValue(initial_values);
+        impedance_start_flag_ = true;
+        service_flag = true;
+    }
+    else if (!req.data)
+    {
+        ROS_INFO("Stoping impedance control.");
+        uav_current_reference_flag_ = false;
+        impedance_start_flag_ = false;
+        service_flag = true;
+    }
+
+    
+    return service_flag;
+}
+
+void ImpedanceControl::uav_current_reference_cb(const trajectory_msgs::MultiDOFJointTrajectory &msg)
+{
+    if (!uav_current_reference_flag_) uav_current_reference_flag_ = true;
+
+    uav_current_ref_ = msg.points[0];
 }
 
 void ImpedanceControl::pose_ref_cb(const geometry_msgs::PoseStamped &msg)
@@ -380,11 +443,11 @@ void ImpedanceControl::run()
 
     ros::Rate loop_rate(rate_);
 
-    while (!start_flag_ && ros::ok())
+    while (!force_start_flag_ && ros::ok())
     {
         ros::spinOnce();
 
-        ROS_INFO("Waiting for the first measurement.");
+        ROS_INFO("Waiting for the first force measurement.");
         ros::Duration(0.5).sleep();
     }
 
@@ -427,73 +490,77 @@ void ImpedanceControl::run()
         loop_rate.sleep();
     }
 
-    counter = 1;
-
-    ROS_INFO("Starting impedance control.");
+    ROS_INFO("Calibration finished.");
+    ROS_INFO("Waiting impedance control to start...");
 
     initializeImpedanceFilterTransferFunction();
     initializeMRACControl();
+
+    counter = 1;
 
     while (ros::ok())
     {
         ros::spinOnce();
 
-        if ((counter % moving_average_sample_number_) == 0)
+        if (impedance_start_flag_)
         {
-            dt = ros::Time::now().toSec() - time_old;
-            time_old = ros::Time::now().toSec();
-
-            if (dt > 0.0)
+            if ((counter % moving_average_sample_number_) == 0)
             {
+                dt = ros::Time::now().toSec() - time_old;
+                time_old = ros::Time::now().toSec();
 
-                fe_[2] = -(force_torque_ref_.wrench.force.z - getFilteredForceZ()); //ide -e iz razloga jer je force senzor rotiran s obzirom na koordinatni letjlice
-                fe_[3] = 0;//-(force_torque_ref_.wrench.torque.y - getFilteredTorqueY());
-                fe_[4] = 0;//-(force_torque_ref_.wrench.torque.x - getFilteredTorqueX());
-                fe_[5] = 0;//-(force_torque_ref_.wrench.torque.z - getFilteredTorqueZ());
+                if (dt > 0.0)
+                {
 
-                vector_pose_ref[0] = pose_ref_.pose.position.x;
-                vector_pose_ref[1] = pose_ref_.pose.position.y;
-                vector_pose_ref[2] = pose_ref_.pose.position.z;
-                vector_pose_ref[3] = pose_ref_.pose.position.x;
-                vector_pose_ref[4] = pose_ref_.pose.position.y;
-                vector_pose_ref[5] = yaw_ref_.data;
+                    fe_[2] = -(force_torque_ref_.wrench.force.z - getFilteredForceZ()); //ide -e iz razloga jer je force senzor rotiran s obzirom na koordinatni letjlice
+                    fe_[3] = 0;//-(force_torque_ref_.wrench.torque.y - getFilteredTorqueY());
+                    fe_[4] = 0;//-(force_torque_ref_.wrench.torque.x - getFilteredTorqueX());
+                    fe_[5] = 0;//-(force_torque_ref_.wrench.torque.z - getFilteredTorqueZ());
 
-                xr = modelReferenceAdaptiveImpedanceControl(dt, fe_, vector_pose_ref);
+                    vector_pose_ref[0] = pose_ref_.pose.position.x;
+                    vector_pose_ref[1] = pose_ref_.pose.position.y;
+                    vector_pose_ref[2] = pose_ref_.pose.position.z;
+                    vector_pose_ref[3] = pose_ref_.pose.position.x;
+                    vector_pose_ref[4] = pose_ref_.pose.position.y;
+                    vector_pose_ref[5] = yaw_ref_.data;
 
-                xc = impedanceFilter(fe_, xr);
+                    xr = modelReferenceAdaptiveImpedanceControl(dt, fe_, vector_pose_ref);
 
-                //dodati negdje yaw
-                //commanded_yaw_msg.data = xc[5];
+                    xc = impedanceFilter(fe_, xr);
 
-                commanded_position_msg.header.stamp = ros::Time::now();
-                commanded_position_msg.pose.position.x = xc[3];
-                commanded_position_msg.pose.position.y = xc[4];
-                commanded_position_msg.pose.position.z = xc[2];
-                commanded_position_msg.pose.orientation.x = 0;
-                commanded_position_msg.pose.orientation.y = 0;
-                commanded_position_msg.pose.orientation.z = 0;
-                commanded_position_msg.pose.orientation.w = 1;
-                pose_commanded_pub_.publish(commanded_position_msg);
+                    //dodati negdje yaw
+                    //commanded_yaw_msg.data = xc[5];
+
+                    commanded_position_msg.header.stamp = ros::Time::now();
+                    commanded_position_msg.pose.position.x = xc[3];
+                    commanded_position_msg.pose.position.y = xc[4];
+                    commanded_position_msg.pose.position.z = xc[2];
+                    commanded_position_msg.pose.orientation.x = 0;
+                    commanded_position_msg.pose.orientation.y = 0;
+                    commanded_position_msg.pose.orientation.z = 0;
+                    commanded_position_msg.pose.orientation.w = 1;
+                    pose_commanded_pub_.publish(commanded_position_msg);
 
 
-                // Publishing filtered force sensor data
-                filtered_ft_sensor_msg.header.stamp = ros::Time::now();
-    			filtered_ft_sensor_msg.wrench.force.z = getFilteredForceZ();
-                filtered_ft_sensor_msg.wrench.force.y = getFilteredForceY();
-                filtered_ft_sensor_msg.wrench.force.x = getFilteredForceX();
-                filtered_ft_sensor_msg.wrench.torque.x = getFilteredTorqueX();
-                filtered_ft_sensor_msg.wrench.torque.y = getFilteredTorqueY();
-                filtered_ft_sensor_msg.wrench.torque.z = getFilteredTorqueZ();
-    			force_filtered_pub_.publish(filtered_ft_sensor_msg);
+                    // Publishing filtered force sensor data
+                    filtered_ft_sensor_msg.header.stamp = ros::Time::now();
+        			filtered_ft_sensor_msg.wrench.force.z = getFilteredForceZ();
+                    filtered_ft_sensor_msg.wrench.force.y = getFilteredForceY();
+                    filtered_ft_sensor_msg.wrench.force.x = getFilteredForceX();
+                    filtered_ft_sensor_msg.wrench.torque.x = getFilteredTorqueX();
+                    filtered_ft_sensor_msg.wrench.torque.y = getFilteredTorqueY();
+                    filtered_ft_sensor_msg.wrench.torque.z = getFilteredTorqueZ();
+        			force_filtered_pub_.publish(filtered_ft_sensor_msg);
 
-                free(xc);
-                free(xr);
+                    free(xc);
+                    free(xr);
+                }
+
+            	counter = 0;
             }
 
-        	counter = 0;
+            counter++;
         }
-
-        counter++;
 
         loop_rate.sleep();
     } 
