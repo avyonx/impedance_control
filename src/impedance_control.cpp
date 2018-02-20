@@ -3,30 +3,9 @@
 #include "yaml-cpp/yaml.h"
 #include <mmuav_impedance_control/Tf1.h>
 
-ImpedanceControl::ImpedanceControl(int rate, int moving_average_sample_number, int median_filter_size)
+ImpedanceControl::ImpedanceControl(int rate)
 {
     int i;
-
-    force_z_meas_ = new float[moving_average_sample_number];
-    force_x_meas_ = new float[moving_average_sample_number];
-    force_y_meas_ = new float[moving_average_sample_number];
-    torque_x_meas_ = new float[moving_average_sample_number];
-    torque_y_meas_ = new float[moving_average_sample_number];
-    torque_z_meas_ = new float[moving_average_sample_number];
-
-    force_z_med_filt.init(median_filter_size);
-    force_x_med_filt.init(median_filter_size);
-    force_y_med_filt.init(median_filter_size);
-
-    for (i = 0; i < moving_average_sample_number; i++)
-    {
-        force_z_meas_[i] = 0;
-        force_x_meas_[i] = 0;
-        force_y_meas_[i] = 0;
-        torque_x_meas_[i] = 0;
-        torque_y_meas_[i] = 0;
-        torque_z_meas_[i] = 0;
-    }
 
     targetImpedanceType_ = 1;
 
@@ -59,7 +38,7 @@ ImpedanceControl::ImpedanceControl(int rate, int moving_average_sample_number, i
     impedance_start_flag_ = false;
     force_sensor_calibration_flag_ = false;
     uav_current_reference_flag_ = false;
-	moving_average_sample_number_ = moving_average_sample_number;
+    force_filters_initialized_= false;
 	rate_ = rate;
 
 	force_ros_sub_ = n_.subscribe("/optoforce_node/OptoForceWrench", 1, &ImpedanceControl::force_measurement_cb, this);
@@ -88,6 +67,41 @@ ImpedanceControl::~ImpedanceControl()
 {
     delete[] force_z_meas_, force_y_meas_, force_x_meas_;
     delete[] torque_z_meas_, torque_y_meas_, torque_x_meas_;
+}
+
+void ImpedanceControl::initForceFilters(int moving_average_sample_number, int median_filter_size, float pt1_t, float dead_zone)
+{
+    int i;
+    force_filters_initialized_ = true;
+
+    moving_average_sample_number_ = moving_average_sample_number;
+    dead_zone_ = dead_zone;
+
+    force_z_meas_ = new float[moving_average_sample_number];
+    force_x_meas_ = new float[moving_average_sample_number];
+    force_y_meas_ = new float[moving_average_sample_number];
+    torque_x_meas_ = new float[moving_average_sample_number];
+    torque_y_meas_ = new float[moving_average_sample_number];
+    torque_z_meas_ = new float[moving_average_sample_number];
+
+    force_z_med_filt.init(median_filter_size);
+    force_x_med_filt.init(median_filter_size);
+    force_y_med_filt.init(median_filter_size);
+
+    force_z_pt1_filt.reset();
+    force_z_pt1_filt.setNumerator(1.0, 0.0);
+    force_z_pt1_filt.setDenominator(1, pt1_t);
+    force_z_pt1_filt.c2d(1.0/rate_, "zoh");
+
+    for (i = 0; i < moving_average_sample_number; i++)
+    {
+        force_z_meas_[i] = 0;
+        force_x_meas_[i] = 0;
+        force_y_meas_[i] = 0;
+        torque_x_meas_[i] = 0;
+        torque_y_meas_[i] = 0;
+        torque_z_meas_[i] = 0;
+    }
 }
 
 void ImpedanceControl::setImpedanceFilterMass(float *mass)
@@ -239,6 +253,26 @@ void ImpedanceControl::setTargetImpedanceType(int type)
     else targetImpedanceType_ = type;
 }
 
+float ImpedanceControl::dead_zone(float data)
+{
+    float temp;
+
+    if (fabs(data) < dead_zone_)
+    {
+        temp = 0.0;
+    }
+    else if (data > 0.0)
+    {
+        temp = data - dead_zone_;
+    }
+    else
+    {
+        temp = data + dead_zone_;
+    }
+
+    return temp;
+}
+
 void ImpedanceControl::force_measurement_cb(const geometry_msgs::WrenchStamped &msg)
 {
 	if (!force_start_flag_) force_start_flag_ = true;
@@ -253,7 +287,7 @@ void ImpedanceControl::force_measurement_cb(const geometry_msgs::WrenchStamped &
         torque_z_meas_[i] = torque_z_meas_[i+1];
     }
 
-	force_z_meas_[moving_average_sample_number_-1] = force_z_med_filt.filter(msg.wrench.force.z);
+	force_z_meas_[moving_average_sample_number_-1] = force_z_pt1_filt.getDiscreteOutput(force_z_med_filt.filter(msg.wrench.force.z));
     force_x_meas_[moving_average_sample_number_-1] = force_x_med_filt.filter(msg.wrench.force.x);
     force_y_meas_[moving_average_sample_number_-1] = force_y_med_filt.filter(msg.wrench.force.y);
     torque_x_meas_[moving_average_sample_number_-1] = msg.wrench.torque.x;
@@ -443,6 +477,12 @@ void ImpedanceControl::run()
     float torque_y_sum = 0;
     float torque_z_sum = 0;
 
+    if (!force_filters_initialized_)
+    {
+        ROS_ERROR("Force filters are not initialized!");
+        return;
+    }
+
     ros::Rate loop_rate(rate_);
 
     while (!force_start_flag_ && ros::ok())
@@ -546,7 +586,7 @@ void ImpedanceControl::run()
 
                     // Publishing filtered force sensor data
                     filtered_ft_sensor_msg.header.stamp = ros::Time::now();
-        			filtered_ft_sensor_msg.wrench.force.z = getFilteredForceZ();
+        			filtered_ft_sensor_msg.wrench.force.z = dead_zone(getFilteredForceZ());
                     filtered_ft_sensor_msg.wrench.force.y = getFilteredForceY();
                     filtered_ft_sensor_msg.wrench.force.x = getFilteredForceX();
                     filtered_ft_sensor_msg.wrench.torque.x = getFilteredTorqueX();
@@ -644,18 +684,21 @@ int main(int argc, char **argv)
     ros::NodeHandle private_node_handle_("~");
 
     int rate, impedanceType, masn, mfs;
+    float pt1_t, dead_zone;
     std::string impedance_control_config_file;
 
     std::string path = ros::package::getPath("mmuav_impedance_control");
 
-    private_node_handle_.param("rate", rate, int(100));
-    private_node_handle_.param("moving_average_sample_number", masn, int(1));
-    private_node_handle_.param("median_filter_size", mfs, int(5));
+    private_node_handle_.param("rate", rate, int(1000));
+    private_node_handle_.param("moving_average_sample_number", masn, int(10));
+    private_node_handle_.param("median_filter_size", mfs, int(21));
+    private_node_handle_.param("pt1_filter_time_constant", pt1_t, float(0.05));
+    private_node_handle_.param("dead_zone", dead_zone, float(0.5));
     private_node_handle_.param("impedance_control_params_file", impedance_control_config_file, std::string("/config/impedance_control_params.yaml"));
     private_node_handle_.param("ImpedanceType", impedanceType, int(1));
 
-    ImpedanceControl impedance_control(rate, masn, mfs);
-
+    ImpedanceControl impedance_control(rate);
+    impedance_control.initForceFilters(masn, mfs, pt1_t, dead_zone);
     impedance_control.LoadImpedanceControlParameters(path+impedance_control_config_file);
     impedance_control.setTargetImpedanceType(impedanceType);
 

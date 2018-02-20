@@ -29,6 +29,7 @@ class ImpedanceControl{
 		float getFilteredTorqueZ(void);
 		bool check_collision(void);
 		bool check_impact(void);
+		float dead_zone(float data);
 		float* impedanceFilter(float *e, float *Xr);
 		float* modelReferenceAdaptiveImpedanceControl(float dt, float *e, float *g0);
 		void setImpedanceFilterInitialValue(float *initial_values);
@@ -37,6 +38,7 @@ class ImpedanceControl{
 
 		volatile bool force_start_flag_, force_sensor_calibration_flag_;
 		volatile bool impedance_start_flag_, uav_current_reference_flag_;
+		volatile bool force_filters_initialized_;
 		bool impact_flag_, collision_;
 		float *force_x_meas_;
 		float *force_z_meas_;
@@ -49,9 +51,12 @@ class ImpedanceControl{
 		float a1_[6], b1_[6], c1_[6], a2_[6], b2_[6], c2_[6], sigma1_[6];
 		float force_z_offset_, force_y_offset_, force_x_offset_, mrac_time_;
 		float torque_y_offset_, torque_x_offset_, torque_z_offset_;
+		float dead_zone_;
 		int rate_, moving_average_sample_number_, targetImpedanceType_;
 
 		median_filter force_z_med_filt, force_x_med_filt, force_y_med_filt;
+
+		Tf1 force_z_pt1_filt;
 
 		geometry_msgs::PoseStamped pose_ref_;
 		geometry_msgs::WrenchStamped force_torque_ref_;
@@ -72,13 +77,14 @@ class ImpedanceControl{
 		mraic mraic_[6];
 
 	public:
-		ImpedanceControl(int rate, int moving_average_sample_number, int median_filter_size);
+		ImpedanceControl(int rate);
 		~ImpedanceControl();
 		void setImpedanceFilterMass(float *mass);
 		void setImpedanceFilterDamping(float *damping);
 		void setImpedanceFilterStiffness(float *stiffness);
 		void setTargetImpedanceType(int type);
 		void LoadImpedanceControlParameters(std::string file);
+		void initForceFilters(int moving_average_sample_number, int median_filter_size, float pt1_t, float dead_zone);
 		void run();
 };
 
