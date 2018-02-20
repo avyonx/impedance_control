@@ -11,8 +11,6 @@ find_package(catkin REQUIRED COMPONENTS
     trajectory_msgs
 )
 
-add_compile_options(-std=c++11)
-
 find_package(cmake_modules REQUIRED)
 
 catkin_package(
