@@ -303,9 +303,6 @@ bool ImpedanceControl::start_impedance_control_cb(std_srvs::SetBool::Request  &r
 
     if (req.data && uav_current_reference_flag_ && !impedance_start_flag_)
     {
-        ROS_INFO("Starting impedance control.");
-        setImpedanceFilterInitialValue(initial_values);
-
         initial_values[0] = uav_current_ref_.transforms[0].translation.x;
         initial_values[1] = uav_current_ref_.transforms[0].translation.y;
         initial_values[2] = uav_current_ref_.transforms[0].translation.z;
@@ -316,6 +313,9 @@ bool ImpedanceControl::start_impedance_control_cb(std_srvs::SetBool::Request  &r
         pose_ref_.pose.position.x = uav_current_ref_.transforms[0].translation.x;
         pose_ref_.pose.position.y = uav_current_ref_.transforms[0].translation.y;
         pose_ref_.pose.position.z = uav_current_ref_.transforms[0].translation.z;
+
+        ROS_INFO("Starting impedance control.");
+        setImpedanceFilterInitialValue(initial_values);
 
         impedance_start_flag_ = true;
         service_flag = true;
