@@ -389,7 +389,7 @@ float ImpedanceControl::getFilteredForceX(void)
 
     average = sum/moving_average_sample_number_ - force_x_offset_;
 
-    return average;
+    return dead_zone(average);
 }
 
 float ImpedanceControl::getFilteredForceY(void)
@@ -402,7 +402,7 @@ float ImpedanceControl::getFilteredForceY(void)
 
     average = sum/moving_average_sample_number_ - force_y_offset_;
 
-    return average;
+    return dead_zone(average);
 }
 
 float ImpedanceControl::getFilteredForceZ(void)
@@ -415,7 +415,7 @@ float ImpedanceControl::getFilteredForceZ(void)
 
     average = sum/moving_average_sample_number_ - force_z_offset_;
 
-    return average;
+    return dead_zone(average);
 }
 
 float ImpedanceControl::getFilteredTorqueX(void)
@@ -428,7 +428,7 @@ float ImpedanceControl::getFilteredTorqueX(void)
 
     average = sum/moving_average_sample_number_ - torque_x_offset_;
 
-    return average;
+    return dead_zone(average);
 }
 
 float ImpedanceControl::getFilteredTorqueY(void)
@@ -441,7 +441,7 @@ float ImpedanceControl::getFilteredTorqueY(void)
 
     average = sum/moving_average_sample_number_ - torque_y_offset_;
 
-    return average;
+    return dead_zone(average);
 }
 
 float ImpedanceControl::getFilteredTorqueZ(void)
@@ -454,7 +454,7 @@ float ImpedanceControl::getFilteredTorqueZ(void)
 
     average = sum/moving_average_sample_number_ - torque_z_offset_;
 
-    return average;
+    return dead_zone(average);
 }
 
 void ImpedanceControl::run()
@@ -586,7 +586,7 @@ void ImpedanceControl::run()
 
                     // Publishing filtered force sensor data
                     filtered_ft_sensor_msg.header.stamp = ros::Time::now();
-        			filtered_ft_sensor_msg.wrench.force.z = dead_zone(getFilteredForceZ());
+        			filtered_ft_sensor_msg.wrench.force.z = getFilteredForceZ();
                     filtered_ft_sensor_msg.wrench.force.y = getFilteredForceY();
                     filtered_ft_sensor_msg.wrench.force.x = getFilteredForceX();
                     filtered_ft_sensor_msg.wrench.torque.x = getFilteredTorqueX();
