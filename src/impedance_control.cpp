@@ -390,7 +390,7 @@ float ImpedanceControl::getFilteredForceX(void)
 
     average = sum/moving_average_sample_number_ - force_x_offset_;
 
-    return dead_zone(average);
+    return average;
 }
 
 float ImpedanceControl::getFilteredForceY(void)
@@ -403,7 +403,7 @@ float ImpedanceControl::getFilteredForceY(void)
 
     average = sum/moving_average_sample_number_ - force_y_offset_;
 
-    return dead_zone(average);
+    return average;
 }
 
 float ImpedanceControl::getFilteredForceZ(void)
@@ -416,7 +416,7 @@ float ImpedanceControl::getFilteredForceZ(void)
 
     average = sum/moving_average_sample_number_ - force_z_offset_;
 
-    return dead_zone(average);
+    return average;
 }
 
 float ImpedanceControl::getFilteredTorqueX(void)
@@ -429,7 +429,7 @@ float ImpedanceControl::getFilteredTorqueX(void)
 
     average = sum/moving_average_sample_number_ - torque_x_offset_;
 
-    return dead_zone(average);
+    return average;
 }
 
 float ImpedanceControl::getFilteredTorqueY(void)
@@ -442,7 +442,7 @@ float ImpedanceControl::getFilteredTorqueY(void)
 
     average = sum/moving_average_sample_number_ - torque_y_offset_;
 
-    return dead_zone(average);
+    return average;
 }
 
 float ImpedanceControl::getFilteredTorqueZ(void)
@@ -455,7 +455,7 @@ float ImpedanceControl::getFilteredTorqueZ(void)
 
     average = sum/moving_average_sample_number_ - torque_z_offset_;
 
-    return dead_zone(average);
+    return average;
 }
 
 void ImpedanceControl::run()
@@ -555,7 +555,7 @@ void ImpedanceControl::run()
                 if (dt > 0.0)
                 {
 
-                    fe_[2] = -(force_torque_ref_.wrench.force.z - getFilteredForceZ()); //ide -e iz razloga jer je force senzor rotiran s obzirom na koordinatni letjlice
+                    fe_[2] = -(force_torque_ref_.wrench.force.z - dead_zone(getFilteredForceZ())); //ide -e iz razloga jer je force senzor rotiran s obzirom na koordinatni letjlice
                     fe_[3] = 0;//-(force_torque_ref_.wrench.torque.y - getFilteredTorqueY());
                     fe_[4] = 0;//-(force_torque_ref_.wrench.torque.x - getFilteredTorqueX());
                     fe_[5] = 0;//-(force_torque_ref_.wrench.torque.z - getFilteredTorqueZ());
@@ -587,7 +587,7 @@ void ImpedanceControl::run()
 
                     // Publishing filtered force sensor data
                     filtered_ft_sensor_msg.header.stamp = ros::Time::now();
-        			filtered_ft_sensor_msg.wrench.force.z = getFilteredForceZ();
+        			filtered_ft_sensor_msg.wrench.force.z = dead_zone(getFilteredForceZ());
                     filtered_ft_sensor_msg.wrench.force.y = getFilteredForceY();
                     filtered_ft_sensor_msg.wrench.force.x = getFilteredForceX();
                     filtered_ft_sensor_msg.wrench.torque.x = getFilteredTorqueX();
