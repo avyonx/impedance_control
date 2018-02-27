@@ -545,16 +545,15 @@ void ImpedanceControl::run()
     {
         ros::spinOnce();
 
-        if (impedance_start_flag_)
+        if ((counter % moving_average_sample_number_) == 0)
         {
-            if ((counter % moving_average_sample_number_) == 0)
+            dt = ros::Time::now().toSec() - time_old;
+            time_old = ros::Time::now().toSec();
+
+            if (dt > 0.0)
             {
-                dt = ros::Time::now().toSec() - time_old;
-                time_old = ros::Time::now().toSec();
-
-                if (dt > 0.0)
+                if (impedance_start_flag_)
                 {
-
                     fe_[2] = -(force_torque_ref_.wrench.force.z - dead_zone(getFilteredForceZ())); //ide -e iz razloga jer je force senzor rotiran s obzirom na koordinatni letjlice
                     fe_[3] = 0;//-(force_torque_ref_.wrench.torque.y - getFilteredTorqueY());
                     fe_[4] = 0;//-(force_torque_ref_.wrench.torque.x - getFilteredTorqueX());
@@ -584,27 +583,26 @@ void ImpedanceControl::run()
                     commanded_position_msg.pose.orientation.w = 1;
                     pose_commanded_pub_.publish(commanded_position_msg);
 
-
-                    // Publishing filtered force sensor data
-                    filtered_ft_sensor_msg.header.stamp = ros::Time::now();
-        			filtered_ft_sensor_msg.wrench.force.z = dead_zone(getFilteredForceZ());
-                    filtered_ft_sensor_msg.wrench.force.y = getFilteredForceY();
-                    filtered_ft_sensor_msg.wrench.force.x = getFilteredForceX();
-                    filtered_ft_sensor_msg.wrench.torque.x = getFilteredTorqueX();
-                    filtered_ft_sensor_msg.wrench.torque.y = getFilteredTorqueY();
-                    filtered_ft_sensor_msg.wrench.torque.z = getFilteredTorqueZ();
-        			force_filtered_pub_.publish(filtered_ft_sensor_msg);
-
                     free(xc);
                     free(xr);
                 }
 
-            	counter = 0;
+                // Publishing filtered force sensor data
+                filtered_ft_sensor_msg.header.stamp = ros::Time::now();
+                filtered_ft_sensor_msg.wrench.force.z = dead_zone(getFilteredForceZ());
+                filtered_ft_sensor_msg.wrench.force.y = getFilteredForceY();
+                filtered_ft_sensor_msg.wrench.force.x = getFilteredForceX();
+                filtered_ft_sensor_msg.wrench.torque.x = getFilteredTorqueX();
+                filtered_ft_sensor_msg.wrench.torque.y = getFilteredTorqueY();
+                filtered_ft_sensor_msg.wrench.torque.z = getFilteredTorqueZ();
+                force_filtered_pub_.publish(filtered_ft_sensor_msg);
+
             }
 
-            counter++;
+        	counter = 0;
         }
 
+        counter++;
         loop_rate.sleep();
     } 
 

@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+import sys, os
+import rospy
+import copy
+import math
+import time
+
+from geometry_msgs.msg import PoseStamped, WrenchStamped
+
+class exp1():
+
+    def __init__(self):
+
+        self.force_torque_ref_pub = rospy.Publisher('/mmuav/impedance_control/force_torque_ref', WrenchStamped, queue_size=1)
+        # Services for requesting trajectory interpolation
+        rospy.sleep(5.)
+
+        self.tempForce = WrenchStamped()
+
+        self.tempForce.header.stamp = rospy.Time.now() 
+        self.tempForce.wrench.force.z = 2.0
+        self.force_torque_ref_pub.publish(self.tempForce)
+        rospy.sleep(15.)
+
+        self.tempForce.header.stamp = rospy.Time.now() 
+        self.tempForce.wrench.force.z = 4.0
+        self.force_torque_ref_pub.publish(self.tempForce)
+        rospy.sleep(15.)
+
+        self.tempForce.header.stamp = rospy.Time.now() 
+        self.tempForce.wrench.force.z = 6.0
+        self.force_torque_ref_pub.publish(self.tempForce)
+        rospy.sleep(15.)
+
+        self.tempForce.header.stamp = rospy.Time.now() 
+        self.tempForce.wrench.force.z = 8.0
+        self.force_torque_ref_pub.publish(self.tempForce)
+        rospy.sleep(15.)
+
+        self.tempForce.header.stamp = rospy.Time.now() 
+        self.tempForce.wrench.force.z = 6.0
+        self.force_torque_ref_pub.publish(self.tempForce)
+        rospy.sleep(15.)
+
+        self.tempForce.header.stamp = rospy.Time.now() 
+        self.tempForce.wrench.force.z = 4.0
+        self.force_torque_ref_pub.publish(self.tempForce)
+        rospy.sleep(15.)
+
+        self.tempForce.header.stamp = rospy.Time.now() 
+        self.tempForce.wrench.force.z = 2.0
+        self.force_torque_ref_pub.publish(self.tempForce)
+        rospy.sleep(15.)
+
+        #self.tempForce.header.stamp = rospy.Time.now() 
+        #self.tempForce.wrench.force.z = 5
+        #self.force_torque_ref_pub.publish(self.tempForce)
+        #rospy.sleep(6.)
+
+        #self.tempForce.header.stamp = rospy.Time.now() 
+        #self.tempForce.wrench.force.z = 10
+        #self.force_torque_ref_pub.publish(self.tempForce)
+        #rospy.sleep(6.)
+
+        #self.tempForce.header.stamp = rospy.Time.now() 
+        #self.tempForce.wrench.force.z = 5
+        #self.force_torque_ref_pub.publish(self.tempForce)
+        #rospy.sleep(6.)
+
+        #self.tempForce.header.stamp = rospy.Time.now() 
+        #self.tempForce.wrench.force.z = 2.0
+        #self.force_torque_ref_pub.publish(self.tempForce)
+        #rospy.sleep(6.)
+
+        #self.tempForce.header.stamp = rospy.Time.now() 
+        #self.tempForce.wrench.force.z = 0.0
+        #self.force_torque_ref_pub.publish(self.tempForce)
+        #rospy.sleep(6.)
+
+
+if __name__=="__main__":
+    rospy.init_node("exp1")
+    exp1()
