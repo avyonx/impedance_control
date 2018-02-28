@@ -23,9 +23,10 @@ class exp2():
         self.tempPose = PoseStamped()
         self.modes = Modes()
 
-        self.r = 0.1
+        self.r = 0.0
+        self.r_max = 0.03
         self.omega = 0.6
-        self.r_time = 40;
+        self.r_time = 20;
 
         self.hole_x = 0.0
         self.hole_y = 0.0
@@ -100,15 +101,15 @@ class exp2():
             if (self.step_two):
 
                 self.tempPose.header.stamp = rospy.Time.now() 
-                self.tempPose.pose.position.x = self.hole_x + self.r * (1 - (rospy.Time.now().to_sec() - self.time_start) / self.r_time) * math.cos(self.omega*(rospy.Time.now().to_sec() - self.time_start))
-                self.tempPose.pose.position.y = self.hole_y + self.r * (1 - (rospy.Time.now().to_sec() - self.time_start) / self.r_time) * math.sin(self.omega*(rospy.Time.now().to_sec() - self.time_start))
+                self.tempPose.pose.position.x = self.hole_x + self.r * ((rospy.Time.now().to_sec() - self.time_start) / self.r_time) * math.cos(self.omega*(rospy.Time.now().to_sec() - self.time_start))
+                self.tempPose.pose.position.y = self.hole_y + self.r * ((rospy.Time.now().to_sec() - self.time_start) / self.r_time) * math.sin(self.omega*(rospy.Time.now().to_sec() - self.time_start))
                 self.tempPose.pose.position.z = self.start_z
                 self.tempPose.pose.orientation.x = 0;
                 self.tempPose.pose.orientation.y = 0;
                 self.tempPose.pose.orientation.z = 0;
                 self.tempPose.pose.orientation.w = 1;
 
-                if (rospy.Time.now().to_sec() - self.time_start > self.r_time): self.r = 0
+                if (rospy.Time.now().to_sec() - self.time_start > self.r_time): self.r = self.r_max
 
                 self.pose_ref_pub_.publish(self.tempPose)
 

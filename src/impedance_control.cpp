@@ -56,7 +56,7 @@ ImpedanceControl::ImpedanceControl(int rate)
     mraic_status_pub_[4] = n_.advertise<mmuav_impedance_control::MRAIController>("impedance_control/mraic/torque_y/status", 1);
     mraic_status_pub_[5] = n_.advertise<mmuav_impedance_control::MRAIController>("impedance_control/mraic/torque_z/status", 1);
 	force_filtered_pub_ = n_.advertise<geometry_msgs::WrenchStamped>("/force_sensor/filtered_ft_sensor", 1);
-    pose_commanded_pub_ = n_.advertise<geometry_msgs::PoseStamped>("impedance_control/pose_command", 1); 
+    pose_commanded_pub_ = n_.advertise<geometry_msgs::PoseStamped>("dual_arm_manipulator/set_point", 1); 
 
     force_z_offset_ = 0.0;
     force_x_offset_ = 0.0;
