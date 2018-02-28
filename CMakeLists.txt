@@ -7,15 +7,25 @@ find_package(catkin REQUIRED COMPONENTS
     rospack
     std_msgs
     dynamic_reconfigure
+    message_generation
     geometry_msgs
     trajectory_msgs
 )
 
 find_package(cmake_modules REQUIRED)
 
+add_message_files(
+  FILES
+  MRAIController.msg
+  Modes.msg
+)
+
+generate_messages(DEPENDENCIES std_msgs)
+
 catkin_package(
    INCLUDE_DIRS include
-   LIBRARIES mmuav_impedance_control yaml-cpp
+   CATKIN_DEPENDS message_runtime
+   LIBRARIES mmuav_impedance_control
    CATKIN_DEPENDS roscpp rospy roslib rospack
 )
 
@@ -37,7 +47,7 @@ add_library(median_filter src/median_filter.cpp)
 target_link_libraries(median_filter ${catkin_LIBRARIES})
 
 add_library(mraic src/mraic.cpp)
-target_link_libraries(mraic ${catkin_LIBRARIES} diff2 Tf2 Tf1)
+target_link_libraries(mraic ${catkin_LIBRARIES} diff2 Tf2 Tf1 median_filter)
 
 add_executable(impedance_control src/impedance_control.cpp)
 target_link_libraries(impedance_control ${catkin_LIBRARIES} yaml-cpp mraic median_filter)

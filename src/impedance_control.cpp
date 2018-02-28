@@ -45,9 +45,16 @@ ImpedanceControl::ImpedanceControl(int rate)
     pose_ref_ros_sub_ = n_.subscribe("impedance_control/pose_ref", 1, &ImpedanceControl::pose_ref_cb, this);
     force_torque_ref_ros_sub_ = n_.subscribe("impedance_control/force_torque_ref", 1, &ImpedanceControl::force_torque_cb, this);
     uav_current_reference_ros_sub_ = n_.subscribe("command/current_reference", 1, &ImpedanceControl::uav_current_reference_cb, this);
+    mode_ros_sub_ = n_.subscribe("impedance_control/modes", 1, &ImpedanceControl::modes_cb, this);
 
     start_impedance_control_ros_srv_ = n_.advertiseService("start_impedance_control", &ImpedanceControl::start_impedance_control_cb, this);
 
+    mraic_status_pub_[0] = n_.advertise<mmuav_impedance_control::MRAIController>("impedance_control/mraic/force_x/status", 1);
+    mraic_status_pub_[1] = n_.advertise<mmuav_impedance_control::MRAIController>("impedance_control/mraic/force_y/status", 1);
+    mraic_status_pub_[2] = n_.advertise<mmuav_impedance_control::MRAIController>("impedance_control/mraic/force_z/status", 1);
+    mraic_status_pub_[3] = n_.advertise<mmuav_impedance_control::MRAIController>("impedance_control/mraic/torque_x/status", 1);
+    mraic_status_pub_[4] = n_.advertise<mmuav_impedance_control::MRAIController>("impedance_control/mraic/torque_y/status", 1);
+    mraic_status_pub_[5] = n_.advertise<mmuav_impedance_control::MRAIController>("impedance_control/mraic/torque_z/status", 1);
 	force_filtered_pub_ = n_.advertise<geometry_msgs::WrenchStamped>("/force_sensor/filtered_ft_sensor", 1);
     pose_commanded_pub_ = n_.advertise<geometry_msgs::PoseStamped>("impedance_control/pose_command", 1); 
 
@@ -60,6 +67,11 @@ ImpedanceControl::ImpedanceControl(int rate)
 
     impact_flag_ = false;
     collision_ = false;
+
+    controller_modes_.controller_fx = false;
+    controller_modes_.controller_fy = false;
+    controller_modes_.controller_fz = false;
+    controller_modes_.controller_tz = false;
 
 }
 
@@ -75,7 +87,7 @@ void ImpedanceControl::initForceFilters(int moving_average_sample_number, int me
     force_filters_initialized_ = true;
 
     moving_average_sample_number_ = moving_average_sample_number;
-    dead_zone_ = dead_zone;
+    dead_zone_z_ = dead_zone;
 
     force_z_meas_ = new float[moving_average_sample_number];
     force_x_meas_ = new float[moving_average_sample_number];
@@ -92,6 +104,16 @@ void ImpedanceControl::initForceFilters(int moving_average_sample_number, int me
     force_z_pt1_filt.setNumerator(1.0, 0.0);
     force_z_pt1_filt.setDenominator(1, pt1_t);
     force_z_pt1_filt.c2d(1.0/rate_, "zoh");
+
+    force_x_pt1_filt.reset();
+    force_x_pt1_filt.setNumerator(1.0, 0.0);
+    force_x_pt1_filt.setDenominator(1, pt1_t);
+    force_x_pt1_filt.c2d(1.0/rate_, "zoh");
+
+    force_y_pt1_filt.reset();
+    force_y_pt1_filt.setNumerator(1.0, 0.0);
+    force_y_pt1_filt.setDenominator(1, pt1_t);
+    force_y_pt1_filt.c2d(1.0/rate_, "zoh");
 
     for (i = 0; i < moving_average_sample_number; i++)
     {
@@ -253,24 +275,36 @@ void ImpedanceControl::setTargetImpedanceType(int type)
     else targetImpedanceType_ = type;
 }
 
-float ImpedanceControl::dead_zone(float data)
+float ImpedanceControl::dead_zone(float data, float limit)
 {
     float temp;
 
-    if (fabs(data) < dead_zone_)
+    if (fabs(data) < limit)
     {
         temp = 0.0;
     }
     else if (data > 0.0)
     {
-        temp = data - dead_zone_;
+        temp = data - limit;
     }
     else
     {
-        temp = data + dead_zone_;
+        temp = data + limit;
     }
 
     return temp;
+}
+
+void ImpedanceControl::publishMRAICstatus(void)
+{
+    int i;
+    mmuav_impedance_control::MRAIController mraic_status_msg;
+
+    for (i = 0; i < 6; i++)
+    {
+        mraic_[i].create_msg(mraic_status_msg);
+        mraic_status_pub_[i].publish(mraic_status_msg);
+    }
 }
 
 void ImpedanceControl::force_measurement_cb(const geometry_msgs::WrenchStamped &msg)
@@ -288,8 +322,8 @@ void ImpedanceControl::force_measurement_cb(const geometry_msgs::WrenchStamped &
     }
 
 	force_z_meas_[moving_average_sample_number_-1] = force_z_pt1_filt.getDiscreteOutput(force_z_med_filt.filter(msg.wrench.force.z));
-    force_x_meas_[moving_average_sample_number_-1] = force_x_med_filt.filter(msg.wrench.force.x);
-    force_y_meas_[moving_average_sample_number_-1] = force_y_med_filt.filter(msg.wrench.force.y);
+    force_x_meas_[moving_average_sample_number_-1] = force_x_pt1_filt.getDiscreteOutput(force_x_med_filt.filter(msg.wrench.force.x));
+    force_y_meas_[moving_average_sample_number_-1] = force_y_pt1_filt.getDiscreteOutput(force_y_med_filt.filter(msg.wrench.force.y));
     torque_x_meas_[moving_average_sample_number_-1] = msg.wrench.torque.x;
     torque_y_meas_[moving_average_sample_number_-1] = msg.wrench.torque.y;
     torque_z_meas_[moving_average_sample_number_-1] = msg.wrench.torque.z;
@@ -353,6 +387,11 @@ void ImpedanceControl::pose_ref_cb(const geometry_msgs::PoseStamped &msg)
     yaw_ref_.data = euler[2];
 
     pose_ref_ = msg;
+}
+
+void ImpedanceControl::modes_cb(const mmuav_impedance_control::Modes &msg)
+{
+    controller_modes_ = msg;
 }
 
 void ImpedanceControl::force_torque_cb(const geometry_msgs::WrenchStamped &msg)
@@ -477,6 +516,7 @@ void ImpedanceControl::run()
     float torque_x_sum = 0;
     float torque_y_sum = 0;
     float torque_z_sum = 0;
+    float euler[3], q[4];
 
     if (!force_filters_initialized_)
     {
@@ -554,10 +594,23 @@ void ImpedanceControl::run()
             {
                 if (impedance_start_flag_)
                 {
-                    fe_[2] = -(force_torque_ref_.wrench.force.z - dead_zone(getFilteredForceZ())); //ide -e iz razloga jer je force senzor rotiran s obzirom na koordinatni letjlice
-                    fe_[3] = 0;//-(force_torque_ref_.wrench.torque.y - getFilteredTorqueY());
-                    fe_[4] = 0;//-(force_torque_ref_.wrench.torque.x - getFilteredTorqueX());
-                    fe_[5] = 0;//-(force_torque_ref_.wrench.torque.z - getFilteredTorqueZ());
+                    if (controller_modes_.controller_fx) fe_[0] = -(force_torque_ref_.wrench.force.x - dead_zone(getFilteredForceX(), 0));
+                    else fe_[0] = 0;
+
+                    if (controller_modes_.controller_fy) fe_[1] = -(force_torque_ref_.wrench.force.y - dead_zone(getFilteredForceY(), 0));
+                    else fe_[1] = 0;
+
+                    if (controller_modes_.controller_fz) fe_[2] = -(force_torque_ref_.wrench.force.z - dead_zone(getFilteredForceZ(), dead_zone_z_));
+                    else fe_[2] = 0;
+
+                    if (controller_modes_.controller_tx) fe_[3] = -(force_torque_ref_.wrench.torque.x - dead_zone(getFilteredTorqueX(), 0));
+                    else fe_[3] = 0;
+
+                    if (controller_modes_.controller_ty) fe_[4] = -(force_torque_ref_.wrench.torque.y - dead_zone(getFilteredTorqueY(), 0));
+                    else fe_[4] = 0;
+
+                    if (controller_modes_.controller_tz) fe_[5] = -(force_torque_ref_.wrench.torque.z - dead_zone(getFilteredTorqueZ(), 0));
+                    else fe_[5] = 0;
 
                     vector_pose_ref[0] = pose_ref_.pose.position.x;
                     vector_pose_ref[1] = pose_ref_.pose.position.y;
@@ -570,6 +623,11 @@ void ImpedanceControl::run()
 
                     xc = impedanceFilter(fe_, xr);
 
+                    euler[0] = 0.0;
+                    euler[1] = 0.0;
+                    euler[2] = xc[5];
+                    euler2quaternion(euler, q);
+
                     //dodati negdje yaw
                     //commanded_yaw_msg.data = xc[5];
 
@@ -577,11 +635,13 @@ void ImpedanceControl::run()
                     commanded_position_msg.pose.position.x = xc[3];
                     commanded_position_msg.pose.position.y = xc[4];
                     commanded_position_msg.pose.position.z = xc[2];
-                    commanded_position_msg.pose.orientation.x = 0;
-                    commanded_position_msg.pose.orientation.y = 0;
-                    commanded_position_msg.pose.orientation.z = 0;
-                    commanded_position_msg.pose.orientation.w = 1;
+                    commanded_position_msg.pose.orientation.x = q[1];
+                    commanded_position_msg.pose.orientation.y = q[2];
+                    commanded_position_msg.pose.orientation.z = q[3];
+                    commanded_position_msg.pose.orientation.w = q[0];
                     pose_commanded_pub_.publish(commanded_position_msg);
+
+                    publishMRAICstatus();
 
                     free(xc);
                     free(xr);
@@ -589,9 +649,9 @@ void ImpedanceControl::run()
 
                 // Publishing filtered force sensor data
                 filtered_ft_sensor_msg.header.stamp = ros::Time::now();
-                filtered_ft_sensor_msg.wrench.force.z = dead_zone(getFilteredForceZ());
-                filtered_ft_sensor_msg.wrench.force.y = getFilteredForceY();
-                filtered_ft_sensor_msg.wrench.force.x = getFilteredForceX();
+                filtered_ft_sensor_msg.wrench.force.z = dead_zone(getFilteredForceZ(), dead_zone_z_);
+                filtered_ft_sensor_msg.wrench.force.y = dead_zone(getFilteredForceY(), 0);
+                filtered_ft_sensor_msg.wrench.force.x = dead_zone(getFilteredForceX(), 0);
                 filtered_ft_sensor_msg.wrench.torque.x = getFilteredTorqueX();
                 filtered_ft_sensor_msg.wrench.torque.y = getFilteredTorqueY();
                 filtered_ft_sensor_msg.wrench.torque.z = getFilteredTorqueZ();
@@ -621,6 +681,22 @@ void ImpedanceControl::quaternion2euler(float *quaternion, float *euler)
     quaternion[1]*quaternion[2]), 1 - 2 * (quaternion[2]*quaternion[2] +
     quaternion[3] * quaternion[3]));
 }
+
+void ImpedanceControl::euler2quaternion(float *euler, float *quaternion)
+{
+    float cy = cos(euler[2] * 0.5);
+    float sy = sin(euler[2] * 0.5);
+    float cr = cos(euler[0] * 0.5);
+    float sr = sin(euler[0] * 0.5);
+    float cp = cos(euler[1] * 0.5);
+    float sp = sin(euler[1] * 0.5);
+
+    quaternion[0] = cy * cr * cp + sy * sr * sp; //w
+    quaternion[1] = cy * sr * cp - sy * cr * sp; //x
+    quaternion[2] = cy * cr * sp + sy * sr * cp; //y
+    quaternion[3] = sy * cr * cp - cy * sr * sp; //z
+}
+
 
 void ImpedanceControl::LoadImpedanceControlParameters(std::string file)
 {

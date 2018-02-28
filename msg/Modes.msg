@@ -1,0 +1,6 @@
+bool controller_fx
+bool controller_fy
+bool controller_fz
+bool controller_tx
+bool controller_ty
+bool controller_tz
