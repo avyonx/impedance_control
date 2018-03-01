@@ -23,17 +23,17 @@ class exp2():
         self.tempPose = PoseStamped()
         self.modes = Modes()
 
-        self.r = 0.0
-        self.r_max = 0.03
-        self.omega = 0.6
-        self.r_time = 20;
+        self.r = 0.02
+        self.r_max = 0.02
+        self.omega = 0.4
+        self.r_time = 40;
 
-        self.hole_x = 0.0
-        self.hole_y = 0.0
+        self.hole_x = -0.295
+        self.hole_y = -0.201
 
-        self.start_x = self.hole_x + self.r
+        self.start_x = self.hole_x
         self.start_y = self.hole_y
-        self.start_z = 0.0
+        self.start_z = 0.97
 
         self.time_start = rospy.Time.now().to_sec()
 
@@ -100,16 +100,18 @@ class exp2():
 
             if (self.step_two):
 
+                self.gain = (rospy.Time.now().to_sec() - self.time_start) / self.r_time
+                if (rospy.Time.now().to_sec() - self.time_start > self.r_time): self.gain = 1
+
+
                 self.tempPose.header.stamp = rospy.Time.now() 
-                self.tempPose.pose.position.x = self.hole_x + self.r * ((rospy.Time.now().to_sec() - self.time_start) / self.r_time) * math.cos(self.omega*(rospy.Time.now().to_sec() - self.time_start))
-                self.tempPose.pose.position.y = self.hole_y + self.r * ((rospy.Time.now().to_sec() - self.time_start) / self.r_time) * math.sin(self.omega*(rospy.Time.now().to_sec() - self.time_start))
+                self.tempPose.pose.position.x = self.hole_x + self.r * self.gain  * math.cos(self.omega*(rospy.Time.now().to_sec() - self.time_start))
+                self.tempPose.pose.position.y = self.hole_y + self.r * self.gain  * math.sin(self.omega*(rospy.Time.now().to_sec() - self.time_start))
                 self.tempPose.pose.position.z = self.start_z
                 self.tempPose.pose.orientation.x = 0;
                 self.tempPose.pose.orientation.y = 0;
                 self.tempPose.pose.orientation.z = 0;
                 self.tempPose.pose.orientation.w = 1;
-
-                if (rospy.Time.now().to_sec() - self.time_start > self.r_time): self.r = self.r_max
 
                 self.pose_ref_pub_.publish(self.tempPose)
 
