@@ -377,14 +377,14 @@ void ImpedanceControl::pose_ref_cb(const geometry_msgs::PoseStamped &msg)
 {
     float q[4], euler[3];
 
-    q[0] = msg.pose.orientation.w;
-    q[1] = msg.pose.orientation.x;
-    q[2] = msg.pose.orientation.y;
-    q[3] = msg.pose.orientation.z;
+    //q[0] = msg.pose.orientation.w;
+    //q[1] = msg.pose.orientation.x;
+    //q[2] = msg.pose.orientation.y;
+    //q[3] = msg.pose.orientation.z;
 
     quaternion2euler(q, euler);
 
-    yaw_ref_.data = euler[2];
+    yaw_ref_.data = msg.pose.orientation.z;
 
     pose_ref_ = msg;
 }
@@ -594,10 +594,10 @@ void ImpedanceControl::run()
             {
                 if (impedance_start_flag_)
                 {
-                    if (controller_modes_.controller_fx) fe_[0] = -(force_torque_ref_.wrench.force.x - dead_zone(getFilteredForceX(), 0));
+                    if (controller_modes_.controller_fx) fe_[0] = (force_torque_ref_.wrench.force.x - dead_zone(getFilteredForceX(), 0));
                     else fe_[0] = 0;
 
-                    if (controller_modes_.controller_fy) fe_[1] = -(force_torque_ref_.wrench.force.y - dead_zone(getFilteredForceY(), 0));
+                    if (controller_modes_.controller_fy) fe_[1] = (force_torque_ref_.wrench.force.y - dead_zone(getFilteredForceY(), 0));
                     else fe_[1] = 0;
 
                     if (controller_modes_.controller_fz) fe_[2] = -(force_torque_ref_.wrench.force.z - dead_zone(getFilteredForceZ(), dead_zone_z_));
@@ -609,7 +609,7 @@ void ImpedanceControl::run()
                     if (controller_modes_.controller_ty) fe_[4] = -(force_torque_ref_.wrench.torque.y - dead_zone(getFilteredTorqueY(), 0));
                     else fe_[4] = 0;
 
-                    if (controller_modes_.controller_tz) fe_[5] = -(force_torque_ref_.wrench.torque.z - dead_zone(getFilteredTorqueZ(), 0));
+                    if (controller_modes_.controller_tz) fe_[5] = (force_torque_ref_.wrench.torque.z - dead_zone(getFilteredTorqueZ(), 0));
                     else fe_[5] = 0;
 
                     vector_pose_ref[0] = pose_ref_.pose.position.x;
@@ -632,8 +632,8 @@ void ImpedanceControl::run()
                     //commanded_yaw_msg.data = xc[5];
 
                     commanded_position_msg.header.stamp = ros::Time::now();
-                    commanded_position_msg.pose.position.x = xc[3];
-                    commanded_position_msg.pose.position.y = xc[4];
+                    commanded_position_msg.pose.position.x = xc[0];
+                    commanded_position_msg.pose.position.y = xc[1];
                     commanded_position_msg.pose.position.z = xc[2];
                     commanded_position_msg.pose.orientation.x = q[1];
                     commanded_position_msg.pose.orientation.y = q[2];

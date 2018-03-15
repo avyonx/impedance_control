@@ -1,0 +1,15 @@
+# Logitech F710 wireless controller
+teleop:
+  insert:
+    type: topic
+    message_type: "std_msgs/Empty"
+    topic_name: insert
+    deadman_buttons: [3]  # RT + Y [3, 7]
+    axis_mappings: []
+  release:
+    type: topic
+    message_type: "std_msgs/Empty"
+    topic_name: release
+    deadman_buttons: [1]  # RT + A [1, 7]
+    axis_mappings: []
+
