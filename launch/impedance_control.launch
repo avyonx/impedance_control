@@ -1,0 +1,22 @@
+<launch>
+  <arg name="mav_name" default="euroc3"/>
+  <arg name="namespace" default="$(arg mav_name)" />
+
+  <group ns="$(arg namespace)" >
+
+    <node pkg="mmuav_impedance_control" type="impedance_control" name="impedance_control">
+      <param name="rate" value="1000"/>
+      <param name="moving_average_sample_number" value="20"/>
+      <param name="median_filter_size" value="21"/>
+      <param name="ImpedanceType" value="1"/>
+      <param name="dead_zone" value="0.5"/>
+      <param name="pt1_filter_time_constant" value="0.05"/>
+      <param name="impedance_control_params_file" value="/config/impedance_control_params.yaml"/>
+      <remap from="impedance_control/pose_command" to="command/pose"/>
+      <param name="capability_group" value="ImpedanceControl"/>
+    </node>
+
+  </group>
+
+</launch>
+
