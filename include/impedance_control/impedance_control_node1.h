@@ -1,16 +1,16 @@
-#ifndef MMUAV_FORCE_CONTROL_H
-#define MMUAV_FORCE_CONTROL_H
+#ifndef IMPEDANCE_CONTROL_H
+#define IMPEDANCE_CONTROL_H
 
 #include "ros/ros.h"
-#include <mmuav_impedance_control/Tf2.h>
-#include <mmuav_impedance_control/median_filter.h>
-#include <mmuav_impedance_control/diff2.h>
+#include <impedance_control/Tf2.h>
+#include <impedance_control/median_filter.h>
+#include <impedance_control/diff2.h>
 #include <geometry_msgs/WrenchStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <std_msgs/Float64.h>
 #include <std_srvs/SetBool.h>
-#include <mmuav_impedance_control/mraic.h>
-#include <mmuav_impedance_control/Modes.h>
+#include <impedance_control/mraic.h>
+#include <impedance_control/Modes.h>
 #include <trajectory_msgs/MultiDOFJointTrajectory.h>
 
 
@@ -20,7 +20,7 @@ class ImpedanceControl{
 		void pose_ref_cb(const geometry_msgs::PoseStamped &msg);
 		void force_torque_cb(const geometry_msgs::WrenchStamped &msg);
 		void uav_current_reference_cb(const trajectory_msgs::MultiDOFJointTrajectory &msg);
-		void modes_cb(const mmuav_impedance_control::Modes &msg);
+		void modes_cb(const impedance_control::Modes &msg);
 		bool start_impedance_control_cb(std_srvs::SetBool::Request  &req, std_srvs::SetBool::Response &res);
 		void initializeImpedanceFilterTransferFunction(void);
 		float getFilteredForceZ(void);
@@ -67,7 +67,7 @@ class ImpedanceControl{
 		trajectory_msgs::MultiDOFJointTrajectoryPoint uav_current_ref_;
 		std_msgs::Float64 yaw_ref_;
 		std::string x_c_ros_topic_;
-		mmuav_impedance_control::Modes controller_modes_;
+		impedance_control::Modes controller_modes_;
 
 		ros::NodeHandle n_;
 

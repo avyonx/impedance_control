@@ -1,10 +1,10 @@
 #ifndef MRAIC_H
 #define MRAIC_H
 
-#include <mmuav_impedance_control/diff2.h>
-#include <mmuav_impedance_control/Tf1.h>
-#include <mmuav_impedance_control/MRAIController.h>
-#include <mmuav_impedance_control/median_filter.h>
+#include <impedance_control/diff2.h>
+#include <impedance_control/Tf1.h>
+#include <impedance_control/MRAIController.h>
+#include <impedance_control/median_filter.h>
 #include <stdint.h>
 
 class mraic{
@@ -35,7 +35,7 @@ class mraic{
 		float getAdaptiveProportionalGainKp(void);
 		float getAdaptiveDerivativeGainKd(void);
 		float getReferencePositionSignal(void);
-		void create_msg(mmuav_impedance_control::MRAIController &msg);
+		void create_msg(impedance_control::MRAIController &msg);
 		void setWeightingFactors(float wp, float wd);
 		float compute(float dt, float e);
 };

@@ -1,4 +1,4 @@
-#include <mmuav_impedance_control/mraic.h>
+#include <impedance_control/mraic.h>
 #include <stdlib.h>
 #include <iostream>
 
@@ -172,7 +172,7 @@ float mraic::compute(float dt, float e)
     return u_;
 }
 
-void mraic::create_msg(mmuav_impedance_control::MRAIController &msg)
+void mraic::create_msg(impedance_control::MRAIController &msg)
 {
     /* Returns ros message of type MARIController */
     msg.q = q_;

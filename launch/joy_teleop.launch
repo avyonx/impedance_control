@@ -3,7 +3,7 @@
 <launch>
   <arg name="joy_dev" default="/dev/input/js1" />
   <arg name="joy_config" default="neo_peginhole" />
-  <arg name="teleop_config" default="$(find mmuav_impedance_control)/config/$(arg joy_config).yaml" />
+  <arg name="teleop_config" default="$(find impedance_control)/config/$(arg joy_config).yaml" />
   <arg name="namespace" default="euroc3" />
 
   <group ns="$(arg namespace)">

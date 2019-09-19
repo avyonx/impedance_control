@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(mmuav_impedance_control)
+project(impedance_control)
 
 find_package(catkin REQUIRED COMPONENTS
     roscpp
@@ -14,9 +14,13 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(cmake_modules REQUIRED)
 
+generate_dynamic_reconfigure_options(
+    config/impedance_control_params.cfg
+    )
+
 add_message_files(
   FILES
-  MRAIController.msg
+  #MRAIController.msg
   Modes.msg
 )
 
@@ -25,7 +29,7 @@ generate_messages(DEPENDENCIES std_msgs)
 catkin_package(
    INCLUDE_DIRS include
    CATKIN_DEPENDS message_runtime
-   LIBRARIES mmuav_impedance_control
+   LIBRARIES impedance_control
    CATKIN_DEPENDS roscpp rospy roslib rospack
 )
 
@@ -46,8 +50,23 @@ target_link_libraries(diff2 ${catkin_LIBRARIES})
 add_library(median_filter src/median_filter.cpp)
 target_link_libraries(median_filter ${catkin_LIBRARIES})
 
-add_library(mraic src/mraic.cpp)
-target_link_libraries(mraic ${catkin_LIBRARIES} diff2 Tf2 Tf1 median_filter)
+add_library(impedance_control src/impedance_control.cpp)
+target_link_libraries(impedance_control ${catkin_LIBRARIES} Tf2)
 
-add_executable(impedance_control src/impedance_control.cpp)
-target_link_libraries(impedance_control ${catkin_LIBRARIES} yaml-cpp mraic median_filter)
+add_library(environment_observer src/environment_observer.cpp)
+target_link_libraries(environment_observer ${catkin_LIBRARIES})
+
+add_library(aic src/aic.cpp)
+target_link_libraries(aic ${catkin_LIBRARIES} Tf1)
+
+add_executable(environment_observer_node src/environment_observer_node.cpp)
+target_link_libraries(environment_observer_node ${catkin_LIBRARIES} environment_observer)
+
+add_executable(impedance_control_node src/impedance_control_node.cpp)
+target_link_libraries(impedance_control_node ${catkin_LIBRARIES} yaml-cpp impedance_control aic)
+
+add_executable(force_filter_node src/force_filter_node.cpp)
+target_link_libraries(force_filter_node ${catkin_LIBRARIES} Tf2 median_filter Tf1)
+
+#add_executable(impedance_control_node1 src/impedance_control_node1.cpp)
+#target_link_libraries(impedance_control_node1 ${catkin_LIBRARIES} yaml-cpp mraic median_filter)

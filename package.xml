@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>mmuav_impedance_control</name>
+  <name>impedance_control</name>
   <version>0.0.1</version>
-  <description>The mmuav impedance control package</description>
+  <description>The impedance control package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->
