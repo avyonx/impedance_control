@@ -9,7 +9,7 @@ private:
 
 	float K_, B_, M_, dead_zone_;
 	int targetImpedanceType_, rate_;
-	Tf2 Ge_, Gxr_;
+	Tf2 Ge_, Gxr_, Gvr_, Gar_;
 public:
 	ImpedanceControl(int rate);
 	void setImpedanceFilterMass(float mass);
@@ -17,7 +17,7 @@ public:
 	void setImpedanceFilterStiffness(float stiffness);
 	void setImpedanceFilterInitialValue(float initial_values);
 	void initializeImpedanceFilterTransferFunction(void);
-	float impedanceFilter(float e, float Xr);
+	float impedanceFilter(float e, float Xr, float Vr, float Ar);
 	void setTargetImpedanceType(int type);
 	void setDeadZone(float dead_zone);
 };

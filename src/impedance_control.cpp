@@ -32,6 +32,14 @@ void ImpedanceControl::setImpedanceFilterInitialValue(float initial_values) {
     }
 
     Gxr_.setInitialValues(y0, x0);
+
+    for (j= 0; j < 3; j++) {
+        y0[j] = 0.0;
+        x0[j] = 0.0;
+    }
+
+    Gvr_.setInitialValues(y0, x0);
+    Gar_.setInitialValues(y0, x0);
 }
 
 void ImpedanceControl::initializeImpedanceFilterTransferFunction(void) {
@@ -45,20 +53,26 @@ void ImpedanceControl::initializeImpedanceFilterTransferFunction(void) {
     Ge_.c2d(samplingTime, "zoh");
 
     Gxr_.reset();
-    if (targetImpedanceType_ == 1)
-        Gxr_.setNumerator(K_, 0.0, 0.0);
-    else if (targetImpedanceType_ == 2)
-        Gxr_.setNumerator(K_, B_, 0.0);
-    else if (targetImpedanceType_ == 3) 
-        Gxr_.setNumerator(K_, B_, M_);
+    Gxr_.setNumerator(K_, 0.0, 0.0);
     Gxr_.setDenominator(K_, B_, M_);
     Gxr_.c2d(samplingTime, "zoh");
+
+    Gvr_.reset();
+    Gvr_.setNumerator(B_, 0.0, 0.0);
+    Gvr_.setDenominator(K_, B_, M_);
+    Gvr_.c2d(samplingTime, "zoh");
+
+    Gar_.reset();
+    Gar_.setNumerator(M_, 0.0, 0.0);
+    Gar_.setDenominator(K_, B_, M_);
+    Gar_.c2d(samplingTime, "zoh");
 }
 
-float ImpedanceControl::impedanceFilter(float e, float Xr) {
+float ImpedanceControl::impedanceFilter(float e, float Xr, float Vr, float Ar) {
     float Xc;
 
-    Xc = Ge_.getDiscreteOutput(deadZone(e, dead_zone_)) + Gxr_.getDiscreteOutput(Xr);
+    Xc = Ge_.getDiscreteOutput(deadZone(e, dead_zone_)) + Gxr_.getDiscreteOutput(Xr) 
+            + Gvr_.getDiscreteOutput(Vr) + Gar_.getDiscreteOutput(Ar);
 
     return Xc;
 }

@@ -203,15 +203,15 @@ public:
 
 	void impedanceFilter() {
 		fe_[0] = 0.0;//force_torque_ref_.wrench.force.x - force_meas_.wrench.force.x;
-		xc_[0] = impedance_control_x_.impedanceFilter(fe_[0], pose_ref_.pose.position.x);
+		xc_[0] = impedance_control_x_.impedanceFilter(fe_[0], pose_ref_.pose.position.x, 0, 0);
 
 		fe_[1] = 0.0;//force_torque_ref_.wrench.force.y - force_meas_.wrench.force.y;
-		xc_[1] = impedance_control_y_.impedanceFilter(fe_[1], pose_ref_.pose.position.y); 
+		xc_[1] = impedance_control_y_.impedanceFilter(fe_[1], pose_ref_.pose.position.y, 0, 0); 
 
 		fe_[2] = -(force_torque_ref_.wrench.force.z - force_meas_.wrench.force.z);
 		xr_ = aic_control_z_.compute(fe_[2], -force_torque_ref_.wrench.force.z, pose_ref_.pose.position.z);
 		Ke_ = aic_control_z_.getAdaptiveEnvironmentStiffnessGainKe();
-		xc_[2] = impedance_control_z_.impedanceFilter(fe_[2], xr_/*pose_ref_.pose.position.z*/);
+		xc_[2] = impedance_control_z_.impedanceFilter(fe_[2], xr_/*pose_ref_.pose.position.z*/, 0, 0);
 	};
 
 	float *getXc() {
