@@ -30,7 +30,8 @@ private:
 
 	bool simulation_flag_, force_msg_received_, reconfigure_start_;
 	bool pose_meas_received_, impedance_start_flag_;
-	float xc_[3], fe_[3], xr_, Ke_;
+	float xc_[3], vc_[3], ac_[3], fe_[3];
+	float xr_[3], vr_[3], ar_[3], Ke_[3];
 	int rate_;
 
 	std::vector<double> ke1_, ke2_, kp_;
@@ -55,10 +56,15 @@ public:
 
 		for (int i = 0; i < 3; i++) {
 			xc_[i] = 0;
+			vc_[i] = 0;
+			ac_[i] = 0;
 			fe_[i] = 0;
-		}
 
-		Ke_ = 0;
+			Ke_[i] = 0;
+			xr_[i] = 0;
+			vr_[i] = 0;
+			ar_[i] = 0;
+		}
 	};
 
 	void clockCb(const rosgraph_msgs::Clock &msg) {
@@ -202,27 +208,48 @@ public:
 	};
 
 	void impedanceFilter() {
+		float X[3];
+
 		fe_[0] = 0.0;//force_torque_ref_.wrench.force.x - force_meas_.wrench.force.x;
-		xc_[0] = impedance_control_x_.impedanceFilter(fe_[0], pose_ref_.pose.position.x, 0, 0);
+		impedance_control_x_.impedanceFilter(fe_[0], pose_ref_.pose.position.x, 0, 0, X);
+		xc_[0] = X[0];
 
 		fe_[1] = 0.0;//force_torque_ref_.wrench.force.y - force_meas_.wrench.force.y;
-		xc_[1] = impedance_control_y_.impedanceFilter(fe_[1], pose_ref_.pose.position.y, 0, 0); 
+		impedance_control_y_.impedanceFilter(fe_[1], pose_ref_.pose.position.y, 0, 0, X);
+		xc_[1] = X[0]; 
 
 		fe_[2] = -(force_torque_ref_.wrench.force.z - force_meas_.wrench.force.z);
-		xr_ = aic_control_z_.compute(fe_[2], -force_torque_ref_.wrench.force.z, pose_ref_.pose.position.z);
-		Ke_ = aic_control_z_.getAdaptiveEnvironmentStiffnessGainKe();
-		xc_[2] = impedance_control_z_.impedanceFilter(fe_[2], xr_/*pose_ref_.pose.position.z*/, 0, 0);
+		xr_[2] = aic_control_z_.compute(fe_[2], -force_torque_ref_.wrench.force.z, pose_ref_.pose.position.z);
+		Ke_[2] = aic_control_z_.getAdaptiveEnvironmentStiffnessGainKe();
+		impedance_control_z_.impedanceFilter(fe_[2], xr_[2], 0, 0, X);
+		xc_[2] = X[0];
 	};
 
 	float *getXc() {
 		return xc_;
 	};
 
-	float getXr() {
+	float *getVc() {
+		return vc_;
+	};
+
+	float *getAc() {
+		return ac_;
+	};
+
+	float *getXr() {
 		return xr_;
 	};
 
-	float getKe() {
+	float *getVr() {
+		return vr_;
+	};
+
+	float *getAr() {
+		return ar_;
+	};
+
+	float *getKe() {
 		return Ke_;
 	};
 };
@@ -298,10 +325,10 @@ int main(int argc, char **argv) {
                 commanded_position_msg.pose.position.x = xc[0];
                 commanded_position_msg.pose.position.y = xc[1];
                 commanded_position_msg.pose.position.z = xc[2];
-                commanded_position_msg.pose.orientation.x = impedance_control.getXr();
-                commanded_position_msg.pose.orientation.y = impedance_control.getKe();
-                commanded_position_msg.pose.orientation.z = 0.0;
-                commanded_position_msg.pose.orientation.w = 0.0;
+                commanded_position_msg.pose.orientation.x = impedance_control.getXr()[2];
+                commanded_position_msg.pose.orientation.y = impedance_control.getKe()[2];
+                commanded_position_msg.pose.orientation.z = impedance_control.getVr()[2];
+                commanded_position_msg.pose.orientation.w = impedance_control.getAr()[2];
                 pose_commanded_pub_.publish(commanded_position_msg);
         	}
         }
