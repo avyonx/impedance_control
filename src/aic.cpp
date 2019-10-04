@@ -19,7 +19,7 @@ void aic::initializeAdaptationLaws(float *k, float T) {
 	Gke_.reset();
 	Gke_.setNumerator(-k[0], -k[1]);
 	Gke_.setDenominator(0.0, 1.0);
-	Gke_.c2d(sampling_time_, "zoh");
+	Gke_.c2d(sampling_time_, "tustin");
 
 	kp_ = k[2];
 }

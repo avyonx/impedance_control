@@ -8,7 +8,9 @@
 #include <rosgraph_msgs/Clock.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/WrenchStamped.h>
+#include <trajectory_msgs/MultiDOFJointTrajectory.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/Twist.h>
 #include <std_srvs/SetBool.h>
 #include <impedance_control/ImpedanceControlConfig.h>
 
@@ -39,6 +41,7 @@ private:
 	rosgraph_msgs::Clock clock_, clock_old_;
 	geometry_msgs::WrenchStamped force_meas_, force_torque_ref_;
 	geometry_msgs::PoseStamped pose_ref_, pose_meas_;
+	geometry_msgs::Twist vel_ref_, acc_ref_;
 
 	ImpedanceControl impedance_control_z_, impedance_control_y_, impedance_control_x_;
 	aic aic_control_z_; 
@@ -79,6 +82,34 @@ public:
 	void poseRefCb(const geometry_msgs::PoseStamped &msg) {
 	    pose_ref_ = msg;
 	};
+
+	void trajectoryRefCb(const trajectory_msgs::MultiDOFJointTrajectory &msg) {
+		if (msg.points.size() > 0)
+		{
+			pose_ref_.header = msg.header;
+			pose_ref_.pose.position.x = msg.points[0].transforms[0].translation.x;
+			pose_ref_.pose.position.y = msg.points[0].transforms[0].translation.y;
+			pose_ref_.pose.position.z = msg.points[0].transforms[0].translation.z;
+			pose_ref_.pose.orientation.x = msg.points[0].transforms[0].rotation.x;
+			pose_ref_.pose.orientation.y = msg.points[0].transforms[0].rotation.y;
+			pose_ref_.pose.orientation.z = msg.points[0].transforms[0].rotation.z;
+			pose_ref_.pose.orientation.w = msg.points[0].transforms[0].rotation.w;
+
+			vel_ref_.linear.x = msg.points[0].velocities[0].linear.x;
+			vel_ref_.linear.y = msg.points[0].velocities[0].linear.y;
+			vel_ref_.linear.z = msg.points[0].velocities[0].linear.z;
+			vel_ref_.angular.x = msg.points[0].velocities[0].angular.x;
+			vel_ref_.angular.y = msg.points[0].velocities[0].angular.y;
+			vel_ref_.angular.z = msg.points[0].velocities[0].angular.z;
+
+			acc_ref_.linear.x = msg.points[0].accelerations[0].linear.x;
+			acc_ref_.linear.y = msg.points[0].accelerations[0].linear.y;
+			acc_ref_.linear.z = msg.points[0].accelerations[0].linear.z;
+			acc_ref_.angular.x = msg.points[0].accelerations[0].angular.x;
+			acc_ref_.angular.y = msg.points[0].accelerations[0].angular.y;
+			acc_ref_.angular.z = msg.points[0].accelerations[0].angular.z;
+		}
+	}
 
 	void forceTorqueRefCb(const geometry_msgs::WrenchStamped &msg) {
     	force_torque_ref_ = msg;
@@ -170,6 +201,24 @@ public:
 	        pose_ref_.pose.position.x = initial_values[0];
 	        pose_ref_.pose.position.y = initial_values[1];
 	        pose_ref_.pose.position.z = initial_values[2];
+	        pose_ref_.pose.orientation.x = pose_meas_.pose.orientation.x;
+	        pose_ref_.pose.orientation.y = pose_meas_.pose.orientation.y;
+	        pose_ref_.pose.orientation.z = pose_meas_.pose.orientation.z;
+	        pose_ref_.pose.orientation.w = pose_meas_.pose.orientation.w;
+
+	        vel_ref_.linear.x = 0;
+	        vel_ref_.linear.y = 0;
+	        vel_ref_.linear.z = 0;
+	        vel_ref_.angular.x = 0;
+	        vel_ref_.angular.y = 0;
+	        vel_ref_.angular.z = 0;
+
+	        acc_ref_.linear.x = 0;
+	        acc_ref_.linear.y = 0;
+	        acc_ref_.linear.z = 0;
+	        acc_ref_.angular.x = 0;
+	        acc_ref_.angular.y = 0;
+	        acc_ref_.angular.z = 0;
 
 	        ROS_INFO("Starting impedance control.");
 	        initializeImpedanceFilterTransferFunction();
@@ -211,11 +260,11 @@ public:
 		float X[3];
 
 		fe_[0] = 0.0;//force_torque_ref_.wrench.force.x - force_meas_.wrench.force.x;
-		impedance_control_x_.impedanceFilter(fe_[0], pose_ref_.pose.position.x, 0, 0, X);
+		impedance_control_x_.impedanceFilter(fe_[0], pose_ref_.pose.position.x, vel_ref_.linear.x, acc_ref_.linear.x, X);
 		xc_[0] = X[0];
 
 		fe_[1] = 0.0;//force_torque_ref_.wrench.force.y - force_meas_.wrench.force.y;
-		impedance_control_y_.impedanceFilter(fe_[1], pose_ref_.pose.position.y, 0, 0, X);
+		impedance_control_y_.impedanceFilter(fe_[1], pose_ref_.pose.position.y, vel_ref_.linear.y, acc_ref_.linear.z, X);
 		xc_[1] = X[0]; 
 
 		fe_[2] = -(force_torque_ref_.wrench.force.z - force_meas_.wrench.force.z);
@@ -223,6 +272,8 @@ public:
 		Ke_[2] = aic_control_z_.getAdaptiveEnvironmentStiffnessGainKe();
 		impedance_control_z_.impedanceFilter(fe_[2], xr_[2], 0, 0, X);
 		xc_[2] = X[0];
+		vc_[2] = X[1];
+		ac_[2] = X[2];
 	};
 
 	float *getXc() {
@@ -278,6 +329,7 @@ int main(int argc, char **argv) {
 	ros::Subscriber clock_ros_sub = n.subscribe("/clock", 1, &ImpedanceControlNode::clockCb, &impedance_control);
 	ros::Subscriber force_ros_sub = n.subscribe("/force_sensor/filtered_ft_sensor", 1, &ImpedanceControlNode::forceMeasurementCb, &impedance_control);
 	ros::Subscriber pose_ref_ros_sub = n.subscribe("impedance_control/pose_ref", 1, &ImpedanceControlNode::poseRefCb, &impedance_control);
+	ros::Subscriber trajectory_ref_ros_sub = n.subscribe("impedance_control/trajectory_ref", 1, &ImpedanceControlNode::trajectoryRefCb, &impedance_control);
 	ros::Subscriber force_torque_ref_ros_sub = n.subscribe("impedance_control/force_torque_ref", 1, &ImpedanceControlNode::forceTorqueRefCb, &impedance_control);
 	ros::Subscriber pose_meas_odometry_sub = n.subscribe("odometry", 1, &ImpedanceControlNode::poseMeasOdomCb, &impedance_control);
 
@@ -327,8 +379,8 @@ int main(int argc, char **argv) {
                 commanded_position_msg.pose.position.z = xc[2];
                 commanded_position_msg.pose.orientation.x = impedance_control.getXr()[2];
                 commanded_position_msg.pose.orientation.y = impedance_control.getKe()[2];
-                commanded_position_msg.pose.orientation.z = impedance_control.getVr()[2];
-                commanded_position_msg.pose.orientation.w = impedance_control.getAr()[2];
+                commanded_position_msg.pose.orientation.z = impedance_control.getVc()[2];
+                commanded_position_msg.pose.orientation.w = impedance_control.getAc()[2];
                 pose_commanded_pub_.publish(commanded_position_msg);
         	}
         }

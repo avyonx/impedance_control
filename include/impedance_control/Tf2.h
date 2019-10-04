@@ -8,6 +8,7 @@ class Tf2{
 		enum PoleType { DOUBLE_REAL, SINGLE_REAL};
 
 		bool zohTransform(void);
+		bool tustinTransform(void);
 		float d0_, d1_, d2_;
 		float n0_, n1_, n2_;
 		float dc0_, dc1_, dc2_;

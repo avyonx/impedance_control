@@ -87,6 +87,8 @@ bool Tf2::c2d(float samplingTime, std::string method)
 	{
 		return zohTransform();
 	}
+	else if (method == "tustin")
+		return tustinTransform();
 	else
 	{
 		return false;
@@ -121,6 +123,23 @@ bool Tf2::zohTransform(void)
 		}
 	}
 
+	return false;
+}
+
+bool Tf2::tustinTransform(void)
+{
+	if (numeratorInit_ && denominatorInit_)
+	{
+		n0_ = nc0_ * T_ * T_ - 2 * nc1_ * T_ + 4 * nc2_;
+		n1_ = (2 * nc0_ * T_ * T_ - 8 * nc2_);
+		n2_ = (nc0_ * T_ * T_ + 2 * nc1_ * T_ + 4 * nc2_);
+		d0_ = dc0_ * T_ * T_ - 2 * dc1_ * T_ + 4 * dc2_;
+		d1_ = (2 * dc0_ * T_ * T_ - 8 * dc2_);
+		d2_ = (dc0_ * T_ * T_ + 2 * dc1_ * T_ + 4 * dc2_);
+
+		return true;
+
+	}
 	return false;
 }
 

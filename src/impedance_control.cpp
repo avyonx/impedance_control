@@ -49,6 +49,7 @@ void ImpedanceControl::setImpedanceFilterInitialValue(float initial_values) {
 
 void ImpedanceControl::initializeImpedanceFilterTransferFunction(void) {
     float samplingTime;
+    float a, b, c;
 
     samplingTime = 1.0/rate_;
 
@@ -56,65 +57,65 @@ void ImpedanceControl::initializeImpedanceFilterTransferFunction(void) {
     Ge_[0].reset();
     Ge_[0].setNumerator(1.0, 0.0, 0.0);
     Ge_[0].setDenominator(K_, B_, M_);
-    Ge_[0].c2d(samplingTime, "zoh");
+    Ge_[0].c2d(samplingTime, "tustin");
 
     Ge_[1].reset();
     Ge_[1].setNumerator(0.0, 1.0, 0.0);
     Ge_[1].setDenominator(K_, B_, M_);
-    Ge_[1].c2d(samplingTime, "zoh");
+    Ge_[1].c2d(samplingTime, "tustin");
 
     Ge_[2].reset();
     Ge_[2].setNumerator(0.0, 0.0, 1.0);
     Ge_[2].setDenominator(K_, B_, M_);
-    Ge_[2].c2d(samplingTime, "zoh");
+    Ge_[2].c2d(samplingTime, "tustin");
 
     //Position transfer function
     Gxr_[0].reset();
     Gxr_[0].setNumerator(K_, 0.0, 0.0);
     Gxr_[0].setDenominator(K_, B_, M_);
-    Gxr_[0].c2d(samplingTime, "zoh");
+    Gxr_[0].c2d(samplingTime, "tustin");
 
     Gxr_[1].reset();
     Gxr_[1].setNumerator(0.0, K_, 0.0);
     Gxr_[1].setDenominator(K_, B_, M_);
-    Gxr_[1].c2d(samplingTime, "zoh");
+    Gxr_[1].c2d(samplingTime, "tustin");
 
     Gxr_[2].reset();
     Gxr_[2].setNumerator(0.0, 0.0, K_);
     Gxr_[2].setDenominator(K_, B_, M_);
-    Gxr_[2].c2d(samplingTime, "zoh");
+    Gxr_[2].c2d(samplingTime, "tustin");
 
     //velocity transfer function
     Gvr_[0].reset();
     Gvr_[0].setNumerator(B_, 0.0, 0.0);
     Gvr_[0].setDenominator(K_, B_, M_);
-    Gvr_[0].c2d(samplingTime, "zoh");
+    Gvr_[0].c2d(samplingTime, "tustin");
 
     Gvr_[1].reset();
     Gvr_[1].setNumerator(0.0, B_, 0.0);
     Gvr_[1].setDenominator(K_, B_, M_);
-    Gvr_[1].c2d(samplingTime, "zoh");
+    Gvr_[1].c2d(samplingTime, "tustin");
 
     Gvr_[2].reset();
     Gvr_[2].setNumerator(0.0, 0.0, B_);
     Gvr_[2].setDenominator(K_, B_, M_);
-    Gvr_[2].c2d(samplingTime, "zoh");
+    Gvr_[2].c2d(samplingTime, "tustin");
 
     //acceleration transfer function
     Gar_[0].reset();
     Gar_[0].setNumerator(M_, 0.0, 0.0);
     Gar_[0].setDenominator(K_, B_, M_);
-    Gar_[0].c2d(samplingTime, "zoh");
+    Gar_[0].c2d(samplingTime, "tustin");
 
     Gar_[1].reset();
     Gar_[1].setNumerator(0.0, M_, 0.0);
     Gar_[1].setDenominator(K_, B_, M_);
-    Gar_[1].c2d(samplingTime, "zoh");
+    Gar_[1].c2d(samplingTime, "tustin");
 
     Gar_[2].reset();
     Gar_[2].setNumerator(0.0, 0.0, M_);
     Gar_[2].setDenominator(K_, B_, M_);
-    Gar_[2].c2d(samplingTime, "zoh");
+    Gar_[2].c2d(samplingTime, "tustin");
 }
 
 void ImpedanceControl::impedanceFilter(float e, float Xr, float Vr, float Ar, float* X) {
@@ -125,7 +126,7 @@ void ImpedanceControl::impedanceFilter(float e, float Xr, float Vr, float Ar, fl
     X[1] = Ge_[1].getDiscreteOutput(deadZone(e, dead_zone_)) + Gxr_[1].getDiscreteOutput(Xr) 
             + Gvr_[1].getDiscreteOutput(Vr) + Gar_[1].getDiscreteOutput(Ar);
 
-    X[2] = Ge_[2].getDiscreteOutput(deadZone(e, dead_zone_)) + Gxr_[2].getDiscreteOutput(Xr) 
+    X[2] = Ge_[2].getDiscreteOutput(deadZone(e, dead_zone_)) + Gxr_[2].getDiscreteOutput(Xr)
             + Gvr_[2].getDiscreteOutput(Vr) + Gar_[2].getDiscreteOutput(Ar);
 
     
