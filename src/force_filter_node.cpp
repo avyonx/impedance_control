@@ -81,7 +81,7 @@ public:
         }
     };
 
-    void forceMeasurementCb(const geometry_msgs::WrenchStamped &msg)
+    void forceMeasurementGlobalCb(const geometry_msgs::WrenchStamped &msg)
     {
         if (!force_start_flag_) force_start_flag_ = true;
 
@@ -101,6 +101,10 @@ public:
         torque_x_meas_[moving_average_sample_number_-1] = msg.wrench.torque.x;
         torque_y_meas_[moving_average_sample_number_-1] = msg.wrench.torque.y;
         torque_z_meas_[moving_average_sample_number_-1] = msg.wrench.torque.z;
+    };
+
+    void forceMeasurementLocalCb(const geometry_msgs::WrenchStamped &msg)
+    {
     };
 
     bool isReady(void)
@@ -207,9 +211,10 @@ int main(int argc, char **argv)
 
     ForceFilter filters(rate);
 
-    ros::Subscriber force_ros_sub = n.subscribe("/force_sensor/ft_sensor", 1, &ForceFilter::forceMeasurementCb, &filters);
+    ros::Subscriber force_local_ros_sub = n.subscribe("force_sensor/force_torque_local_input", 1, &ForceFilter::forceMeasurementLocalCb, &filters);
+    ros::Subscriber force_global_ros_sub = n.subscribe("force_sensor/force_torque_global_input", 1, &ForceFilter::forceMeasurementGlobalCb, &filters);
     
-    ros::Publisher force_filtered_pub_ = n.advertise<geometry_msgs::WrenchStamped>("/force_sensor/filtered_ft_sensor", 1);
+    ros::Publisher force_filtered_pub_ = n.advertise<geometry_msgs::WrenchStamped>("force_sensor/force_torque_output", 1);
     
     ros::ServiceServer zero_all_ros_srv = n.advertiseService("force_filter/zero_all", &ForceFilter::zeroAllCb, &filters);
 

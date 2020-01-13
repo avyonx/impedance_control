@@ -13,31 +13,26 @@
 
   <arg name="enable_logging" default="true"/>
   <arg name="enable_ground_truth" default="true"/>
-  <arg name="log_file" default="mmuav"/>
+  <arg name="log_file" default="uav"/>
 
-  <arg name="namespace" default="mmuav"/>
-
-  <include file="$(find gazebo_ros)/launch/empty_world.launch">
-    <arg name="debug" value="$(arg debug)" />
-    <arg name="paused" value="$(arg paused)" />
-    <arg name="gui" value="$(arg gui)" />
-    <arg name="verbose" value="$(arg verbose)"/>
-  </include>
+  <arg name="namespace" default="uav"/>
 
   <node name="sor_pgs_w" pkg="dynamic_reconfigure" type="dynparam" args="set gazebo sor_pgs_w 1.0"/>
 
-  <include file="$(find mmuav_description)/launch/spawn_mmuav.launch" />
-  <include file="$(find mmuav_description)/launch/spawn_force_sensor.launch" />
-  <include file="$(find mmuav_control)/launch/mmuav_control.launch" />
+  <include file="$(find mmuav_gazebo)/launch/uav_attitude_position.launch">
+    <arg name="manipulator_type" value="wp_manipulator" />
+  </include>
+  <include file="$(find mmuav_description)/launch/spawn_wall.launch" />
 
   <group ns="$(arg namespace)">
-    <node name="dual_arm_manipulator_control_node" pkg="mmuav_control" type="dual_arm_manipulator_control_node" output="screen"/>
-    <node name="uav_attitude_control" pkg="mmuav_control" type="uav_attitude_control"/>
-    <node name="uav_position_control" pkg="mmuav_control" type="uav_position_control"/>
-    <node name="impedance_control_node" pkg="impedance_control" type="impedance_control_node" output="screen" />
-    <node name="force_filter_node" pkg="impedance_control" type="force_filter_node"/>
-    <node name="mmuav_joint_position_control" pkg="mmuav_control" type="mmuav_joint_position_control" args="joint1_left_position_controller joint2_left_position_controller joint3_left_position_controller joint1_right_position_controller joint2_right_position_controller joint3_right_position_controller"/>
-    <node name="controller_outputs_to_motor_velocities" pkg="mmuav_control" type="controller_outputs_to_motor_velocities.py"/>
+    <node name="impedance_control_node" pkg="impedance_control" type="impedance_control_node" output="screen">
+      <remap from="impedance_control/force_torque_meas_input" to="force_sensor/force_torque_output" />
+      <remap from="impedance_control/odometry_meas_input" to="odometry" />
+      <remap from="impedance_control/pose_output" to="pose_ref" />
+    </node>
+    <node name="force_filter_node" pkg="impedance_control" type="force_filter_node">
+      <remap from="force_sensor/force_torque_global_input" to="/force_sensor/ft_sensor" />
+    </node>
   </group>
 
 </launch>

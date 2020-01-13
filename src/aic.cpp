@@ -17,9 +17,9 @@ void aic::initializeAdaptationLaws(float *k, float T) {
 	sampling_time_ = T;
 
 	Gke_.reset();
-	Gke_.setNumerator(-k[0], -k[1]);
+	Gke_.setNumerator(k[0], k[1]);
 	Gke_.setDenominator(0.0, 1.0);
-	Gke_.c2d(sampling_time_, "tustin");
+	Gke_.c2d(sampling_time_, "zoh");
 
 	kp_ = k[2];
 }
@@ -31,7 +31,7 @@ float aic::getAdaptiveEnvironmentStiffnessGainKe(void) {
 float aic::compute(float e, float fd, float xd) {
 	ke_ = calculateAdaptiveEnvironmentStiffnessGainKe(e);
 
-	xr_ = xd + fd*ke_ + kp_*e;
+	xr_ = xd + fd*ke_*(1+e*kp_);
 
 	return xr_;
 }
@@ -40,7 +40,7 @@ float aic::calculateAdaptiveEnvironmentStiffnessGainKe(float e) {
 	float ke;
 
 	ke = ke0_ + Gke_.getDiscreteOutput(e);
-
+	
 	return ke;
 }
 
