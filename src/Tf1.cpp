@@ -24,7 +24,7 @@ Tf1::Tf1(void)
 	denominatorInit_ = false;
 }
 
-bool Tf1::setNumerator(float n0, float n1) //n0 bez s-a
+bool Tf1::setNumerator(double n0, double n1) //n0 bez s-a
 {
 	nc0_ = n0;
 	nc1_ = n1;
@@ -34,9 +34,9 @@ bool Tf1::setNumerator(float n0, float n1) //n0 bez s-a
 	return numeratorInit_;
 }
 
-bool Tf1::setDenominator(float d0, float d1)
+bool Tf1::setDenominator(double d0, double d1)
 {
-	float discriminant;
+	double discriminant;
 
 	dc0_ = d0;
 	dc1_ = d1;
@@ -53,7 +53,7 @@ bool Tf1::setDenominator(float d0, float d1)
 	return denominatorInit_;
 }
 
-bool Tf1::c2d(float samplingTime, std::string method)
+bool Tf1::c2d(double samplingTime, std::string method)
 {
 	if (samplingTime > 0.0) T_ = samplingTime;
 	else return false;
@@ -62,10 +62,29 @@ bool Tf1::c2d(float samplingTime, std::string method)
 	{
 		return zohTransform();
 	}
+	else if (method == "tustin")
+	{
+		return tustinTransform();
+	}
 	else
 	{
 		return false;
 	}
+}
+
+bool Tf1::tustinTransform(void)
+{
+	if (numeratorInit_ && denominatorInit_)
+	{
+		d0_ = T_ * dc0_ - 2 * dc1_;
+		d1_ = 2 * dc1_ + T_ * dc0_;
+		n1_ = 2 * nc1_ + T_ * nc0_;
+		n0_ = T_ * nc0_ - 2 * nc1_;
+
+		return true;
+	}
+
+	return false;
 }
 
 bool Tf1::zohTransform(void)
@@ -95,7 +114,7 @@ bool Tf1::zohTransform(void)
 	return false;
 }
 
-void Tf1::setInitialValues(float *y0, float *x0)
+void Tf1::setInitialValues(double *y0, double *x0)
 {
 	for (int i = 0; i < 2; i++)
 	{
@@ -104,13 +123,13 @@ void Tf1::setInitialValues(float *y0, float *x0)
 	}
 }
 
-void Tf1::getDiscreteDenominator(float *d0, float *d1)
+void Tf1::getDiscreteDenominator(double *d0, double *d1)
 {
 	*d0 = d0_;
 	*d1 = d1_;
 }
 
-void Tf1::getDiscreteNumerator(float *n0, float *n1)
+void Tf1::getDiscreteNumerator(double *n0, double *n1)
 {
 	*n0 = n0_;
 	*n1 = n1_;
@@ -125,7 +144,7 @@ void Tf1::reset(void)
 	}
 }
 
-float Tf1::getDiscreteOutput(float input)
+double Tf1::getDiscreteOutput(double input)
 {
 	int i;
 

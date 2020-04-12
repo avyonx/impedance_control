@@ -31,7 +31,7 @@ Tf2::Tf2(void)
 	b_ = 0.0;
 }
 
-bool Tf2::setNumerator(float n0, float n1, float n2) //n0 bez s-a
+bool Tf2::setNumerator(double n0, double n1, double n2) //n0 bez s-a
 {
 	nc0_ = n0;
 	nc1_ = n1;
@@ -42,9 +42,9 @@ bool Tf2::setNumerator(float n0, float n1, float n2) //n0 bez s-a
 	return numeratorInit_;
 }
 
-bool Tf2::setDenominator(float d0, float d1, float d2)
+bool Tf2::setDenominator(double d0, double d1, double d2)
 {
-	float discriminant;
+	double discriminant;
 
 	dc0_ = d0;
 	dc1_ = d1;
@@ -78,7 +78,7 @@ bool Tf2::setDenominator(float d0, float d1, float d2)
 	return denominatorInit_;
 }
 
-bool Tf2::c2d(float samplingTime, std::string method)
+bool Tf2::c2d(double samplingTime, std::string method)
 {
 	if (samplingTime > 0.0) T_ = samplingTime;
 	else return false;
@@ -143,7 +143,7 @@ bool Tf2::tustinTransform(void)
 	return false;
 }
 
-void Tf2::setInitialValues(float *y0, float *x0)
+void Tf2::setInitialValues(double *y0, double *x0)
 {
 	for (int i = 0; i < 3; i++)
 	{
@@ -152,14 +152,14 @@ void Tf2::setInitialValues(float *y0, float *x0)
 	}
 }
 
-void Tf2::getDiscreteDenominator(float *d0, float *d1, float *d2)
+void Tf2::getDiscreteDenominator(double *d0, double *d1, double *d2)
 {
 	*d0 = d0_;
 	*d1 = d1_;
 	*d2 = d2_;
 }
 
-void Tf2::getDiscreteNumerator(float *n0, float *n1, float *n2)
+void Tf2::getDiscreteNumerator(double *n0, double *n1, double *n2)
 {
 	*n0 = n0_;
 	*n1 = n1_;
@@ -175,7 +175,7 @@ void Tf2::reset(void)
 	}
 }
 
-float Tf2::getDiscreteOutput(float input)
+double Tf2::getDiscreteOutput(double input)
 {
 	int i;
 

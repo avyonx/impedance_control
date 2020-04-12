@@ -4,7 +4,7 @@
 
   <!-- these are the arguments you can pass this launch file, for example paused:=true -->
   <arg name="paused" default="false"/>
-  <arg name="use_sim_time" default="false"/>
+  <arg name="use_sim_time" default="true"/>
   <arg name="gui" default="true"/>
   <arg name="headless" default="false"/>
   <arg name="debug" default="false"/>
@@ -16,6 +16,9 @@
   <arg name="log_file" default="uav"/>
 
   <arg name="namespace" default="uav"/>
+
+  <arg name="impedance_control_rate" default="100"/>
+  <arg name="impedance_control_params_file" default="/config/impedance_control_params.yaml"/>
 
   <node name="sor_pgs_w" pkg="dynamic_reconfigure" type="dynparam" args="set gazebo sor_pgs_w 1.0"/>
 
@@ -29,8 +32,16 @@
       <remap from="impedance_control/force_torque_meas_input" to="force_sensor/force_torque_output" />
       <remap from="impedance_control/odometry_meas_input" to="odometry" />
       <remap from="impedance_control/pose_output" to="pose_ref" />
+
+      <param name="rate" value="100"/>
+      <param name="impedance_control_params_file" value="$(arg use_sim_time)"/>
+      <param name="simulation" value="$(arg use_sim_time)"/>
     </node>
     <node name="force_filter_node" pkg="impedance_control" type="force_filter_node">
+      <param name="rate" value="1000"/>
+      <param name="moving_average_sample_number" value="10"/>
+      <param name="median_filter_size" value="21"/>
+      <param name="pt1_filter_time_constant" value="0.05"/>
       <remap from="force_sensor/force_torque_global_input" to="/force_sensor/ft_sensor" />
     </node>
   </group>

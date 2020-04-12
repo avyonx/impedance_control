@@ -5,21 +5,21 @@
 
 class ImpedanceControl {
 private:
-	float deadZone(float data, float limit);
+	double deadZone(double data, double limit);
 
-	float K_, B_, M_, dead_zone_;
-	int targetImpedanceType_, rate_;
+	double K_, B_, M_, dead_zone_;
+	double Xc_[3];
+	int rate_;
 	Tf2 Ge_[3], Gxr_[3], Gvr_[3], Gar_[3];
 public:
 	ImpedanceControl(int rate);
-	void setImpedanceFilterMass(float mass);
-	void setImpedanceFilterDamping(float damping);
-	void setImpedanceFilterStiffness(float stiffness);
-	void setImpedanceFilterInitialValue(float initial_values);
+	void setImpedanceFilterMass(double mass);
+	void setImpedanceFilterDamping(double damping);
+	void setImpedanceFilterStiffness(double stiffness);
+	void setImpedanceFilterInitialValue(double initial_values);
 	void initializeImpedanceFilterTransferFunction(void);
-	void impedanceFilter(float e, float Xr, float Vr, float Ar, float* X);
-	void setTargetImpedanceType(int type);
-	void setDeadZone(float dead_zone);
+	double* impedanceFilter(double f, double fd, double* Xr);
+	void setDeadZone(double dead_zone);
 };
 
 

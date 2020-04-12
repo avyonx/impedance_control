@@ -47,6 +47,9 @@ target_link_libraries(Tf1 ${catkin_LIBRARIES})
 add_library(diff2 src/diff2.cpp)
 target_link_libraries(diff2 ${catkin_LIBRARIES})
 
+add_library(function src/function.cpp)
+target_link_libraries(function ${catkin_LIBRARIES})
+
 add_library(median_filter src/median_filter.cpp)
 target_link_libraries(median_filter ${catkin_LIBRARIES})
 
@@ -57,7 +60,7 @@ add_library(environment_observer src/environment_observer.cpp)
 target_link_libraries(environment_observer ${catkin_LIBRARIES})
 
 add_library(aic src/aic.cpp)
-target_link_libraries(aic ${catkin_LIBRARIES} Tf1)
+target_link_libraries(aic ${catkin_LIBRARIES} Tf1 Tf2 function)
 
 add_executable(environment_observer_node src/environment_observer_node.cpp)
 target_link_libraries(environment_observer_node ${catkin_LIBRARIES} environment_observer)

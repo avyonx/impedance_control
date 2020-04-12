@@ -9,26 +9,26 @@ class Tf2{
 
 		bool zohTransform(void);
 		bool tustinTransform(void);
-		float d0_, d1_, d2_;
-		float n0_, n1_, n2_;
-		float dc0_, dc1_, dc2_;
-		float nc0_, nc1_, nc2_;
-		float T_, a_, b_;
-		float x_[3];
-		float y_[3];
+		double d0_, d1_, d2_;
+		double n0_, n1_, n2_;
+		double dc0_, dc1_, dc2_;
+		double nc0_, nc1_, nc2_;
+		double T_, a_, b_;
+		double x_[3];
+		double y_[3];
 		Tf2::PoleType poletype_;
 		bool numeratorInit_, denominatorInit_;
 
 	public:
 		Tf2(void);
-		bool setDenominator(float d0, float d1, float d2);
-		bool setNumerator(float n0, float n1, float n2);
-		float getDiscreteOutput(float input);
-		void setSamplingTime(float samplingTime);
-		bool c2d(float samplingTime, std::string method);
-		void getDiscreteDenominator(float *d0, float *d1, float *d2);
-		void getDiscreteNumerator(float *n0, float *n1, float *n2);
-		void setInitialValues(float *y0, float *x0);
+		bool setDenominator(double d0, double d1, double d2);
+		bool setNumerator(double n0, double n1, double n2);
+		double getDiscreteOutput(double input);
+		void setSamplingTime(double samplingTime);
+		bool c2d(double samplingTime, std::string method);
+		void getDiscreteDenominator(double *d0, double *d1, double *d2);
+		void getDiscreteNumerator(double *n0, double *n1, double *n2);
+		void setInitialValues(double *y0, double *x0);
 		void reset(void);
 	
 };

@@ -12,7 +12,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Twist.h>
 #include <std_srvs/SetBool.h>
-#include <std_msgs/Float32MultiArray.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <impedance_control/ImpedanceControlConfig.h>
 
 #include "yaml-cpp/yaml.h"
@@ -33,11 +33,11 @@ private:
 
 	bool simulation_flag_, force_msg_received_, reconfigure_start_;
 	bool pose_meas_received_, impedance_start_flag_;
-	float xc_[3], vc_[3], ac_[3], fe_[3];
-	float xr_[3], vr_[3], ar_[3], Ke_[3];
+	double *xr_, *xc_, *yr_, *yc_, *zr_, *zc_, *xKp_, *yKp_, *zKp_;
+	double xq_, yq_, zq_;
 	int rate_;
 
-	std::vector<double> ke1_, ke2_, kp_;
+	std::vector<double> kp1_, kp2_, wp_, wd_, M_, B_, K_, dead_zone_;
 
 	rosgraph_msgs::Clock clock_, clock_old_;
 	geometry_msgs::WrenchStamped force_meas_, force_torque_ref_;
@@ -56,19 +56,10 @@ public:
 		impedance_control_x_(rate),
 		impedance_control_y_(rate),
 		impedance_control_z_(rate),
+		aic_control_x_(rate),
+		aic_control_y_(rate),
+		aic_control_z_(rate),
 		reconfigure_start_(false) {
-
-		for (int i = 0; i < 3; i++) {
-			xc_[i] = 0;
-			vc_[i] = 0;
-			ac_[i] = 0;
-			fe_[i] = 0;
-
-			Ke_[i] = 0;
-			xr_[i] = 0;
-			vr_[i] = 0;
-			ar_[i] = 0;
-		}
 	};
 
 	void clockCb(const rosgraph_msgs::Clock &msg) {
@@ -82,6 +73,8 @@ public:
 
 	void poseRefCb(const geometry_msgs::PoseStamped &msg) {
 	    pose_ref_ = msg;
+	    vel_ref_ = geometry_msgs::Twist();
+	    acc_ref_ = geometry_msgs::Twist();
 	};
 
 	void trajectoryRefCb(const trajectory_msgs::MultiDOFJointTrajectory &msg) {
@@ -123,100 +116,91 @@ public:
 	};
 
 	void reconfigureCb(impedance_control::ImpedanceControlConfig &config, uint32_t level) {
-		float ke[3];
 
 		if (!reconfigure_start_) {
-			config.ke1_x = ke1_[0];
-			config.ke2_x = ke2_[0];
-			config.kp_x = kp_[0];
+			config.kp1_x = kp1_[0];
+			config.kp2_x = kp2_[0];
+			config.wp_x = wp_[0];
+			config.wd_x = wd_[0];
 
-			config.ke1_y = ke1_[1];
-			config.ke2_y = ke2_[1];
-			config.kp_y = kp_[1];
+			config.kp1_y = kp1_[1];
+			config.kp2_y = kp2_[1];
+			config.wp_y = wp_[1];
+			config.wd_y = wd_[1];
 
-			config.ke1_z = ke1_[2];
-			config.ke2_z = ke2_[2];
-			config.kp_z = kp_[2];
+			config.kp1_z = kp1_[2];
+			config.kp2_z = kp2_[2];
+			config.wp_z = wp_[2];
+			config.wd_z = wd_[2];
 			reconfigure_start_ = true;
 		}
 		else {
-			ke1_[0] = config.ke1_x;
-			ke2_[0] = config.ke2_x;
-			kp_[0] = config.kp_x;
+			kp1_[0] = config.kp1_x;
+			kp2_[0] = config.kp2_x;
+			wp_[0] = config.wp_x;
+			wd_[0] = config.wd_x;
 
-			ke1_[1] = config.ke1_y;
-			ke2_[1] = config.ke2_y;
-			kp_[1] = config.kp_y;
+			kp1_[1] = config.kp1_y;
+			kp2_[1] = config.kp2_y;
+			wp_[1] = config.wp_y;
+			wd_[1] = config.wd_y;
 
-			ke1_[2] = config.ke1_z;
-			ke2_[2] = config.ke2_z;
-			kp_[2] = config.kp_z;
+			kp1_[2] = config.kp1_z;
+			kp2_[2] = config.kp2_z;
+			wp_[2] = config.wp_z;
+			wd_[2] = config.wd_z;
 
-			ke[0] = ke1_[0];
-    		ke[1] = ke2_[0];
-    		ke[2] = kp_[0];
-			aic_control_x_.initializeAdaptationLaws(ke, (float)(1.0/rate_));
-
-			ke[0] = ke1_[1];
-    		ke[1] = ke2_[1];
-    		ke[2] = kp_[1];
-			aic_control_y_.initializeAdaptationLaws(ke, (float)(1.0/rate_));
-
-			ke[0] = ke1_[2];
-    		ke[1] = ke2_[2];
-    		ke[2] = kp_[2];
-			aic_control_z_.initializeAdaptationLaws(ke, (float)(1.0/rate_));
+			aic_control_x_.setAdaptiveParameters(kp1_[0], kp2_[0], wp_[0], wd_[0]);
+			aic_control_y_.setAdaptiveParameters(kp1_[1], kp2_[1], wp_[1], wd_[1]);
+			aic_control_z_.setAdaptiveParameters(kp1_[2], kp2_[2], wp_[2], wd_[2]);
 		}	
 	};
 
 	void loadImpedanceControlParameters(std::string file) {
 		YAML::Node config = YAML::LoadFile(file);
-		std::vector<double> B, K, M, dead_zone, Ke0;
-		std::vector<int> impedance_type;
-		float ke[3];
+		std::vector<double> Ke0;
 
-		M = config["IMPEDANCE_FILTER"]["M"].as<std::vector<double> >();
-    	B = config["IMPEDANCE_FILTER"]["B"].as<std::vector<double> >();
-    	K = config["IMPEDANCE_FILTER"]["K"].as<std::vector<double> >();
-    	dead_zone = config["IMPEDANCE_FILTER"]["dead_zone"].as<std::vector<double> >();
-    	impedance_type = config["IMPEDANCE_FILTER"]["impedance_type"].as<std::vector<int> >();
-    	ke1_ = config["AIC"]["INTEGRAL_ADAPTATION_GAINS"]["ke1"].as<std::vector<double> >();
-    	ke2_ = config["AIC"]["PROPORTIONAL_ADAPTATION_GAINS"]["ke2"].as<std::vector<double> >();
+		M_ = config["IMPEDANCE_FILTER"]["M"].as<std::vector<double> >();
+    	B_ = config["IMPEDANCE_FILTER"]["B"].as<std::vector<double> >();
+    	K_ = config["IMPEDANCE_FILTER"]["K"].as<std::vector<double> >();
+    	dead_zone_ = config["IMPEDANCE_FILTER"]["dead_zone"].as<std::vector<double> >();
+    	kp1_ = config["AIC"]["INTEGRAL_ADAPTATION_GAINS"]["ke1"].as<std::vector<double> >();
+    	kp2_ = config["AIC"]["PROPORTIONAL_ADAPTATION_GAINS"]["ke2"].as<std::vector<double> >();
     	Ke0 = config["AIC"]["INITIAL_GAINS"]["Ke"].as<std::vector<double> >();
-    	kp_ = config["AIC"]["PROPORTIONAL_ERROR_GAIN"]["kp"].as<std::vector<double> >();
+    	wp_ = config["AIC"]["WEIGHTING_FACTORS"]["Wp"].as<std::vector<double> >();
+		wd_ = config["AIC"]["WEIGHTING_FACTORS"]["Wd"].as<std::vector<double> >();
     	
-    	impedance_control_x_.setImpedanceFilterMass(M[0]);
-    	impedance_control_x_.setImpedanceFilterDamping(B[0]);
-    	impedance_control_x_.setImpedanceFilterStiffness(K[0]);
-    	impedance_control_x_.setTargetImpedanceType(impedance_type[0]);
-    	impedance_control_x_.setDeadZone(dead_zone[0]);
-    	aic_control_x_.setAdaptiveParameterInitialValues(Ke0[0]);
-    	ke[0] = ke1_[0];
-    	ke[1] = ke2_[0];
-    	ke[2] = kp_[0];
-    	aic_control_x_.initializeAdaptationLaws(ke, (float)(1.0/rate_));
+    	impedance_control_x_.setImpedanceFilterMass(M_[0]);
+    	impedance_control_x_.setImpedanceFilterDamping(B_[0]);
+    	impedance_control_x_.setImpedanceFilterStiffness(K_[0]);
+    	impedance_control_x_.setDeadZone(dead_zone_[0]);
+    	aic_control_x_.setImpedanceFilterParameters(M_[0], B_[0], K_[0]);
+		aic_control_x_.setAdaptiveParameters(kp1_[0], kp2_[0], wp_[0], wd_[0]);
+		aic_control_x_.initializeAdaptationLaws();
+		aic_control_x_.setAdaptiveParameterInitialValues(Ke0[0]);
+		aic_control_x_.setDeadZone(dead_zone_[0]);
 
-    	impedance_control_y_.setImpedanceFilterMass(M[1]);
-    	impedance_control_y_.setImpedanceFilterDamping(B[1]);
-    	impedance_control_y_.setImpedanceFilterStiffness(K[1]);
-    	impedance_control_y_.setTargetImpedanceType(impedance_type[1]);
-    	impedance_control_y_.setDeadZone(dead_zone[1]);
-    	aic_control_y_.setAdaptiveParameterInitialValues(Ke0[1]);
-    	ke[0] = ke1_[1];
-    	ke[1] = ke2_[1];
-    	ke[2] = kp_[1];
-    	aic_control_y_.initializeAdaptationLaws(ke, (float)(1.0/rate_));
 
-    	impedance_control_z_.setImpedanceFilterMass(M[2]);
-    	impedance_control_z_.setImpedanceFilterDamping(B[2]);
-    	impedance_control_z_.setImpedanceFilterStiffness(K[2]);
-    	impedance_control_z_.setTargetImpedanceType(impedance_type[2]);
-    	impedance_control_z_.setDeadZone(dead_zone[2]);
-    	aic_control_z_.setAdaptiveParameterInitialValues(Ke0[2]);
-    	ke[0] = ke1_[2];
-    	ke[1] = ke2_[2];
-    	ke[2] = kp_[2];
-    	aic_control_z_.initializeAdaptationLaws(ke, (float)(1.0/rate_));
+    	impedance_control_y_.setImpedanceFilterMass(M_[1]);
+    	impedance_control_y_.setImpedanceFilterDamping(B_[1]);
+    	impedance_control_y_.setImpedanceFilterStiffness(K_[1]);
+		impedance_control_y_.setDeadZone(dead_zone_[1]);
+		aic_control_y_.setImpedanceFilterParameters(M_[1], B_[1], K_[1]);
+		aic_control_y_.setAdaptiveParameters(kp1_[1], kp2_[1], wp_[1], wd_[1]);
+		aic_control_y_.initializeAdaptationLaws();
+		aic_control_y_.setAdaptiveParameterInitialValues(Ke0[1]);
+		aic_control_y_.setDeadZone(dead_zone_[1]);
+
+
+    	impedance_control_z_.setImpedanceFilterMass(M_[2]);
+    	impedance_control_z_.setImpedanceFilterDamping(B_[2]);
+    	impedance_control_z_.setImpedanceFilterStiffness(K_[2]);
+		impedance_control_z_.setDeadZone(dead_zone_[2]);
+		aic_control_z_.setImpedanceFilterParameters(M_[2], B_[2], K_[2]);
+		aic_control_z_.setAdaptiveParameters(kp1_[2], kp2_[2], wp_[2], wd_[2]);
+		aic_control_z_.initializeAdaptationLaws();
+		aic_control_z_.setAdaptiveParameterInitialValues(Ke0[2]);
+		aic_control_z_.setDeadZone(dead_zone_[2]);
 	};
 
 	bool isReady(void)
@@ -278,13 +262,13 @@ public:
 	    return true;
 	};
 
-	double getTime() {
-		double time;
+    ros::Time getTime() {
+        ros::Time time;
 
 		if (simulation_flag_)
-			time = clock_.clock.toSec();
+			time = clock_.clock;
 		else 
-			time = ros::Time::now().toSec();
+			time = ros::Time::now();
 
 		return time;
 	};
@@ -294,60 +278,85 @@ public:
 	};
 
 	void impedanceFilter() {
-		float X[3];
+		double xd[3], yd[3], zd[3];
 
-		fe_[0] = force_torque_ref_.wrench.force.x - force_meas_.wrench.force.x;
-		xr_[0] = aic_control_x_.compute(fe_[0], force_torque_ref_.wrench.force.x, pose_ref_.pose.position.x);
-		Ke_[0] = aic_control_x_.getAdaptiveEnvironmentStiffnessGainKe();
-		impedance_control_x_.impedanceFilter(fe_[0], xr_[0], vel_ref_.linear.x, acc_ref_.linear.x, X);
-		xc_[0] = X[0];
-		vc_[0] = X[1];
-		ac_[0] = X[2];
+		xd[0] = pose_ref_.pose.position.x;
+        xd[1] = vel_ref_.linear.x;
+        xd[2] = acc_ref_.linear.x;
 
-		fe_[1] = force_torque_ref_.wrench.force.y - force_meas_.wrench.force.y;
-		xr_[1] = aic_control_y_.compute(fe_[1], force_torque_ref_.wrench.force.y, pose_ref_.pose.position.y);
-		Ke_[1] = aic_control_y_.getAdaptiveEnvironmentStiffnessGainKe();
-		impedance_control_y_.impedanceFilter(fe_[1], xr_[1], vel_ref_.linear.y, acc_ref_.linear.y, X);
-		xc_[1] = X[0]; 
-		vc_[1] = X[1];
-		ac_[1] = X[2];
-		
-		fe_[2] = (force_torque_ref_.wrench.force.z - force_meas_.wrench.force.z);
-		xr_[2] = aic_control_z_.compute(fe_[2], force_torque_ref_.wrench.force.z, pose_ref_.pose.position.z);
-		Ke_[2] = aic_control_z_.getAdaptiveEnvironmentStiffnessGainKe();
-		impedance_control_z_.impedanceFilter(fe_[2], xr_[2], vel_ref_.linear.z, acc_ref_.linear.z, X);
-		xc_[2] = X[0];
-		vc_[2] = X[1];
-		ac_[2] = X[2];
+        yd[0] = pose_ref_.pose.position.y;
+        yd[1] = vel_ref_.linear.y;
+        yd[2] = acc_ref_.linear.y;
+
+        zd[0] = pose_ref_.pose.position.z;
+        zd[1] = vel_ref_.linear.z;
+        zd[2] = acc_ref_.linear.z;
+
+
+
+		xr_ = aic_control_x_.compute(force_meas_.wrench.force.x, force_torque_ref_.wrench.force.x, xd);
+        xKp_ = aic_control_x_.getAdaptiveEnvironmentStiffnessGainKp();
+        xq_ = aic_control_x_.getQ();
+        xc_ = impedance_control_x_.impedanceFilter(force_meas_.wrench.force.x, force_torque_ref_.wrench.force.x, xr_);
+
+        yr_ = aic_control_y_.compute(force_meas_.wrench.force.y, force_torque_ref_.wrench.force.y, yd);
+        yKp_ = aic_control_y_.getAdaptiveEnvironmentStiffnessGainKp();
+        yq_ = aic_control_y_.getQ();
+        yc_ = impedance_control_y_.impedanceFilter(force_meas_.wrench.force.y, force_torque_ref_.wrench.force.y, yr_);
+
+        zr_ = aic_control_z_.compute(force_meas_.wrench.force.z, force_torque_ref_.wrench.force.z, zd);
+        zKp_ = aic_control_z_.getAdaptiveEnvironmentStiffnessGainKp();
+        zq_ = aic_control_z_.getQ();
+        zc_ = impedance_control_z_.impedanceFilter(force_meas_.wrench.force.z, force_torque_ref_.wrench.force.z, zr_);
 	};
 
-	float *getXc() {
+	double *getXc() {
 		return xc_;
 	};
 
-	float *getVc() {
-		return vc_;
-	};
+    double *getYc() {
+        return yc_;
+    };
 
-	float *getAc() {
-		return ac_;
-	};
+    double *getZc() {
+        return zc_;
+    };
 
-	float *getXr() {
-		return xr_;
-	};
+    double *getXr() {
+        return xr_;
+    };
 
-	float *getVr() {
-		return vr_;
-	};
+    double *getYr() {
+        return yr_;
+    };
 
-	float *getAr() {
-		return ar_;
-	};
+    double *getZr() {
+        return zr_;
+    };
 
-	float *getKe() {
-		return Ke_;
-	};
+    double *getXKp() {
+        return xKp_;
+    };
+
+    double *getYKp() {
+        return yKp_;
+    };
+
+    double *getZKp() {
+        return zKp_;
+    };
+
+    double getXq() {
+        return xq_;
+    };
+
+    double getYq() {
+        return yq_;
+    };
+
+    double getZq() {
+        return zq_;
+    };
 };
 
 int main(int argc, char **argv) {
@@ -355,12 +364,13 @@ int main(int argc, char **argv) {
 	std::string impedance_control_config_file;
 	bool simulation_flag;
 	double time, time_old, dt;
-	float *xc, *vc, *ac, *xr, *vr, *ar, *ke, dead_zone;
+	double *xc, *yc, *zc, *xr, *yr, *zr, *xKp, *yKp, *zKp;
+	double xq, yq, zq;
 
 	geometry_msgs::PoseStamped commanded_position_msg;
-	std_msgs::Float32MultiArray state_msg;
+	std_msgs::Float64MultiArray state_msg;
 
-	state_msg.data.resize(21);
+	state_msg.data.resize(30);
 
 	ros::init(argc, argv, "impedance_control_node");
 	ros::NodeHandle n, private_node_handle_("~");
@@ -383,7 +393,7 @@ int main(int argc, char **argv) {
 
 	ros::Publisher pose_stamped_commanded_pub_ = n.advertise<geometry_msgs::PoseStamped>("impedance_control/pose_stamped_output", 1);
 	ros::Publisher pose_commanded_pub_ = n.advertise<geometry_msgs::Pose>("impedance_control/pose_output", 1);
-	ros::Publisher state_pub_ = n.advertise<std_msgs::Float32MultiArray>("impedance_control/state", 1);
+	ros::Publisher state_pub_ = n.advertise<std_msgs::Float64MultiArray>("impedance_control/state", 1);
 
 	ros::ServiceServer start_impedance_control_ros_srv = n.advertiseService("impedance_control/start", &ImpedanceControlNode::startImpedanceControlCb, &impedance_control);
 
@@ -408,12 +418,12 @@ int main(int argc, char **argv) {
     }
     ROS_INFO("Waiting impedance control to start...");
 
-    time_old = impedance_control.getTime();
+    time_old = impedance_control.getTime().toSec();
 
     while (ros::ok()) {
         ros::spinOnce();
 
-    	time = impedance_control.getTime();
+    	time = impedance_control.getTime().toSec();
 
         dt = time - time_old;
         time_old = time;
@@ -423,17 +433,22 @@ int main(int argc, char **argv) {
         		impedance_control.impedanceFilter();
 
         		xc = impedance_control.getXc();
-        		vc = impedance_control.getVc();
-        		ac = impedance_control.getAc();
-        		xr = impedance_control.getXr();
-        		vr = impedance_control.getVr();
-        		ar = impedance_control.getAr();
-        		ke = impedance_control.getKe();
+                yc = impedance_control.getYc();
+                zc = impedance_control.getZc();
+                xr = impedance_control.getXr();
+                yr = impedance_control.getYr();
+                zr = impedance_control.getZr();
+                xKp = impedance_control.getXKp();
+                yKp = impedance_control.getYKp();
+                zKp = impedance_control.getZKp();
+                xq = impedance_control.getXq();
+                yq = impedance_control.getYq();
+                zq = impedance_control.getZq();
 
-        		commanded_position_msg.header.stamp = ros::Time::now();
+        		commanded_position_msg.header.stamp = impedance_control.getTime();
                 commanded_position_msg.pose.position.x = xc[0];
-                commanded_position_msg.pose.position.y = xc[1];
-                commanded_position_msg.pose.position.z = xc[2];
+                commanded_position_msg.pose.position.y = yc[0];
+                commanded_position_msg.pose.position.z = zc[0];
                 commanded_position_msg.pose.orientation.x = 0;
                 commanded_position_msg.pose.orientation.y = 0;
                 commanded_position_msg.pose.orientation.z = 0;
@@ -443,14 +458,19 @@ int main(int argc, char **argv) {
 
                 int j = 0;
                 for (int i = 0; i < 3; i++) {
-                	state_msg.data[j++] = xc[i];
-                	state_msg.data[j++] = vc[i];
-                	state_msg.data[j++] = ac[i];
                 	state_msg.data[j++] = xr[i];
-                	state_msg.data[j++] = vr[i];
-                	state_msg.data[j++] = ar[i];
-                	state_msg.data[j++] = ke[i];
+                	state_msg.data[j++] = yr[i];
+                	state_msg.data[j++] = zr[i];
+                	state_msg.data[j++] = xc[i];
+                	state_msg.data[j++] = yc[i];
+                	state_msg.data[j++] = zc[i];
+                	state_msg.data[j++] = xKp[i];
+                    state_msg.data[j++] = yKp[i];
+                    state_msg.data[j++] = zKp[i];
                 }
+                state_msg.data[j++] = xq;
+                state_msg.data[j++] = yq;
+                state_msg.data[j++] = zq;
                 state_pub_.publish(state_msg);
         	}
         }

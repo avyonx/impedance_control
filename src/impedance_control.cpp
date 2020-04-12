@@ -2,29 +2,32 @@
 #include <math.h>
 
 ImpedanceControl::ImpedanceControl(int rate):
-    targetImpedanceType_(1),
     M_(0),
     B_(0),
     K_(0),
     dead_zone_(0),
     rate_(rate) {
+    Xc_[0] = 0.0;
+    Xc_[1] = 0.0;
+    Xc_[2] = 0.0;
+
 }
 
-void ImpedanceControl::setImpedanceFilterMass(float mass) {
+void ImpedanceControl::setImpedanceFilterMass(double mass) {
     M_ = mass;
 }
 
-void ImpedanceControl::setImpedanceFilterDamping(float damping) {
+void ImpedanceControl::setImpedanceFilterDamping(double damping) {
     B_ = damping;
 }
 
-void ImpedanceControl::setImpedanceFilterStiffness(float stiffness) {
+void ImpedanceControl::setImpedanceFilterStiffness(double stiffness) {
     K_ = stiffness;
 }
 
-void ImpedanceControl::setImpedanceFilterInitialValue(float initial_values) {
+void ImpedanceControl::setImpedanceFilterInitialValue(double initial_values) {
     int j;
-    float y0[3], x0[3]; 
+    double y0[3], x0[3];
 
     for (j= 0; j < 3; j++) {
         y0[j] = initial_values;
@@ -48,8 +51,7 @@ void ImpedanceControl::setImpedanceFilterInitialValue(float initial_values) {
 }
 
 void ImpedanceControl::initializeImpedanceFilterTransferFunction(void) {
-    float samplingTime;
-    float a, b, c;
+    double samplingTime;
 
     samplingTime = 1.0/rate_;
 
@@ -118,31 +120,27 @@ void ImpedanceControl::initializeImpedanceFilterTransferFunction(void) {
     Gar_[2].c2d(samplingTime, "tustin");
 }
 
-void ImpedanceControl::impedanceFilter(float e, float Xr, float Vr, float Ar, float* X) {
+double* ImpedanceControl::impedanceFilter(double f, double fd, double* Xr) {
+    double e = fd - f;
 
-    X[0] = Ge_[0].getDiscreteOutput(deadZone(e, dead_zone_)) + Gxr_[0].getDiscreteOutput(Xr) 
-            + Gvr_[0].getDiscreteOutput(Vr) + Gar_[0].getDiscreteOutput(Ar);
+    Xc_[0] = Ge_[0].getDiscreteOutput(deadZone(e, dead_zone_)) + Gxr_[0].getDiscreteOutput(Xr[0])
+            + Gvr_[0].getDiscreteOutput(Xr[1]) + Gar_[0].getDiscreteOutput(Xr[2]);
 
-    X[1] = Ge_[1].getDiscreteOutput(deadZone(e, dead_zone_)) + Gxr_[1].getDiscreteOutput(Xr) 
-            + Gvr_[1].getDiscreteOutput(Vr) + Gar_[1].getDiscreteOutput(Ar);
+    Xc_[1] = Ge_[1].getDiscreteOutput(deadZone(e, dead_zone_)) + Gxr_[1].getDiscreteOutput(Xr[0])
+            + Gvr_[1].getDiscreteOutput(Xr[1]) + Gar_[1].getDiscreteOutput(Xr[2]);
 
-    X[2] = Ge_[2].getDiscreteOutput(deadZone(e, dead_zone_)) + Gxr_[2].getDiscreteOutput(Xr)
-            + Gvr_[2].getDiscreteOutput(Vr) + Gar_[2].getDiscreteOutput(Ar);
+    Xc_[2] = Ge_[2].getDiscreteOutput(deadZone(e, dead_zone_)) + Gxr_[2].getDiscreteOutput(Xr[0])
+            + Gvr_[2].getDiscreteOutput(Xr[1]) + Gar_[2].getDiscreteOutput(Xr[2]);
 
-    
+    return Xc_;
 }
 
-void ImpedanceControl::setTargetImpedanceType(int type) {
-    if (type < 1 || type > 3) targetImpedanceType_ = 1;
-    else targetImpedanceType_ = type;
-}
-
-void ImpedanceControl::setDeadZone(float dead_zone) {
+void ImpedanceControl::setDeadZone(double dead_zone) {
     dead_zone_ = dead_zone;
 }
 
-float ImpedanceControl::deadZone(float data, float limit) {
-    float temp;
+double ImpedanceControl::deadZone(double data, double limit) {
+    double temp;
 
     if (fabs(data) < limit) {
         temp = 0.0;
