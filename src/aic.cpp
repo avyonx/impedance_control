@@ -45,6 +45,7 @@ void aic::setImpedanceFilterParameters(double mass, double damping, double stiff
 
 void aic::setAdaptiveParameters(double gamma1, double gamma2, double wp, double wd)
 {
+	printf("Gama %lf, %lf\n", gamma1, gamma2);
 	gamma_[0] = gamma1;
 	gamma_[1] = gamma2;
 	wp_ = wp;

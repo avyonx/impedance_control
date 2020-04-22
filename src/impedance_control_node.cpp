@@ -31,13 +31,27 @@ private:
 		impedance_control_z_.setImpedanceFilterInitialValue(initial_values[2]);
 	};
 
+	void initializeAdaptationLaws()
+	{
+		aic_control_x_.initializeAdaptationLaws();
+		aic_control_y_.initializeAdaptationLaws();
+		aic_control_z_.initializeAdaptationLaws();
+	};
+
+	void setAdaptiveEnvironmentStiffnessInitialValue()
+	{
+		aic_control_x_.setAdaptiveParameterInitialValues(kp0_[0]);
+		aic_control_y_.setAdaptiveParameterInitialValues(kp0_[1]);
+		aic_control_z_.setAdaptiveParameterInitialValues(kp0_[2]);
+	};
+
 	bool simulation_flag_, force_msg_received_, reconfigure_start_;
 	bool pose_meas_received_, impedance_start_flag_;
 	double *xr_, *xc_, *yr_, *yc_, *zr_, *zc_, *xKp_, *yKp_, *zKp_;
 	double xq_, yq_, zq_;
 	int rate_;
 
-	std::vector<double> kp1_, kp2_, wp_, wd_, M_, B_, K_, dead_zone_;
+	std::vector<double> kp1_, kp2_, wp_, wd_, M_, B_, K_, dead_zone_, kp0_;
 
 	rosgraph_msgs::Clock clock_, clock_old_;
 	geometry_msgs::WrenchStamped force_meas_, force_torque_ref_;
@@ -153,12 +167,13 @@ public:
 			aic_control_x_.setAdaptiveParameters(kp1_[0], kp2_[0], wp_[0], wd_[0]);
 			aic_control_y_.setAdaptiveParameters(kp1_[1], kp2_[1], wp_[1], wd_[1]);
 			aic_control_z_.setAdaptiveParameters(kp1_[2], kp2_[2], wp_[2], wd_[2]);
+
+			initializeAdaptationLaws();
 		}	
 	};
 
 	void loadImpedanceControlParameters(std::string file) {
 		YAML::Node config = YAML::LoadFile(file);
-		std::vector<double> Ke0;
 
 		M_ = config["IMPEDANCE_FILTER"]["M"].as<std::vector<double> >();
     	B_ = config["IMPEDANCE_FILTER"]["B"].as<std::vector<double> >();
@@ -166,7 +181,7 @@ public:
     	dead_zone_ = config["IMPEDANCE_FILTER"]["dead_zone"].as<std::vector<double> >();
     	kp1_ = config["AIC"]["INTEGRAL_ADAPTATION_GAINS"]["ke1"].as<std::vector<double> >();
     	kp2_ = config["AIC"]["PROPORTIONAL_ADAPTATION_GAINS"]["ke2"].as<std::vector<double> >();
-    	Ke0 = config["AIC"]["INITIAL_GAINS"]["Ke"].as<std::vector<double> >();
+    	kp0_ = config["AIC"]["INITIAL_GAINS"]["Ke"].as<std::vector<double> >();
     	wp_ = config["AIC"]["WEIGHTING_FACTORS"]["Wp"].as<std::vector<double> >();
 		wd_ = config["AIC"]["WEIGHTING_FACTORS"]["Wd"].as<std::vector<double> >();
     	
@@ -176,8 +191,6 @@ public:
     	impedance_control_x_.setDeadZone(dead_zone_[0]);
     	aic_control_x_.setImpedanceFilterParameters(M_[0], B_[0], K_[0]);
 		aic_control_x_.setAdaptiveParameters(kp1_[0], kp2_[0], wp_[0], wd_[0]);
-		aic_control_x_.initializeAdaptationLaws();
-		aic_control_x_.setAdaptiveParameterInitialValues(Ke0[0]);
 		aic_control_x_.setDeadZone(dead_zone_[0]);
 
 
@@ -187,8 +200,6 @@ public:
 		impedance_control_y_.setDeadZone(dead_zone_[1]);
 		aic_control_y_.setImpedanceFilterParameters(M_[1], B_[1], K_[1]);
 		aic_control_y_.setAdaptiveParameters(kp1_[1], kp2_[1], wp_[1], wd_[1]);
-		aic_control_y_.initializeAdaptationLaws();
-		aic_control_y_.setAdaptiveParameterInitialValues(Ke0[1]);
 		aic_control_y_.setDeadZone(dead_zone_[1]);
 
 
@@ -198,8 +209,6 @@ public:
 		impedance_control_z_.setDeadZone(dead_zone_[2]);
 		aic_control_z_.setImpedanceFilterParameters(M_[2], B_[2], K_[2]);
 		aic_control_z_.setAdaptiveParameters(kp1_[2], kp2_[2], wp_[2], wd_[2]);
-		aic_control_z_.initializeAdaptationLaws();
-		aic_control_z_.setAdaptiveParameterInitialValues(Ke0[2]);
 		aic_control_z_.setDeadZone(dead_zone_[2]);
 	};
 
@@ -244,6 +253,10 @@ public:
 	        ROS_INFO("Starting impedance control.");
 	        initializeImpedanceFilterTransferFunction();
 	        setImpedanceFilterInitialValue(initial_values);
+
+			initializeAdaptationLaws();
+			setAdaptiveEnvironmentStiffnessInitialValue();
+
 
 	        impedance_start_flag_ = true;
 	        service_flag = true;
