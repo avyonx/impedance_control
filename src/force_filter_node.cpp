@@ -1,9 +1,12 @@
 #include "ros/ros.h"
 
+#include <eigen3/Eigen/Eigen>
+
 #include <impedance_control/Tf1.h>
 #include <impedance_control/median_filter.h>
 
 #include <geometry_msgs/WrenchStamped.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <std_srvs/Empty.h>
 
 class ForceFilter {
@@ -25,11 +28,18 @@ private:
     median_filter force_z_med_filt, force_x_med_filt, force_y_med_filt;
 
     Tf1 force_z_pt1_filt, force_x_pt1_filt, force_y_pt1_filt;
+
+    Eigen::Matrix4d T_LG_;
 public:
     ForceFilter(int rate):
         rate_(rate),
         force_start_flag_(false),
         force_filters_initialized_(false) {
+
+        T_LG_ << 1,  0,  0,  0,
+                 0,  1,  0,  0,
+                 0,  0,  1,  0,
+                 0,  0,  0,  1;
     };
 
     ~ForceFilter() {
@@ -105,7 +115,52 @@ public:
 
     void forceMeasurementLocalCb(const geometry_msgs::WrenchStamped &msg)
     {
+        Eigen::Matrix4d F, Fg;
+        Eigen::Matrix4d T, Tg;
+
+        if (!force_start_flag_) force_start_flag_ = true;
+
+        for (int i=0; i<(moving_average_sample_number_-1); i++)
+        {
+            force_z_meas_[i] = force_z_meas_[i+1];
+            force_x_meas_[i] = force_x_meas_[i+1];
+            force_y_meas_[i] = force_y_meas_[i+1];
+            torque_x_meas_[i] = torque_x_meas_[i+1];
+            torque_y_meas_[i] = torque_y_meas_[i+1];
+            torque_z_meas_[i] = torque_z_meas_[i+1];
+        }
+
+        F << 1,  0,  0,  msg.wrench.force.x,
+             0,  1,  0,  msg.wrench.force.y,
+             0,  0,  1,  msg.wrench.force.z,
+             0,  0,  0,  1;
+
+        T << 1,  0,  0,  msg.wrench.torque.x,
+             0,  1,  0,  msg.wrench.torque.y,
+             0,  0,  1,  msg.wrench.torque.z,
+             0,  0,  0,  1;
+
+        Fg = T_LG_ * F;
+        Tg = T_LG_ * T;
+
+        force_z_meas_[moving_average_sample_number_-1] = force_z_pt1_filt.getDiscreteOutput(force_z_med_filt.filter(Fg(2, 3)));
+        force_x_meas_[moving_average_sample_number_-1] = force_x_pt1_filt.getDiscreteOutput(force_x_med_filt.filter(Fg(0, 3)));
+        force_y_meas_[moving_average_sample_number_-1] = force_y_pt1_filt.getDiscreteOutput(force_y_med_filt.filter(Fg(1, 3)));
+        torque_x_meas_[moving_average_sample_number_-1] = Tg(0, 3);
+        torque_y_meas_[moving_average_sample_number_-1] = Tg(1, 3);
+        torque_z_meas_[moving_average_sample_number_-1] = Tg(2, 3);
     };
+
+    void transformationMatrixCb(const std_msgs::Float64MultiArray &msg)
+    {
+        if (msg.data.size() == 16)
+        {
+            T_LG_ << msg.data[0],  msg.data[1],  msg.data[2],  msg.data[3],
+                     msg.data[4],  msg.data[5],  msg.data[6],  msg.data[7],
+                     msg.data[8],  msg.data[9],  msg.data[10], msg.data[11],
+                     msg.data[12], msg.data[13], msg.data[14], msg.data[15];
+        }
+    }
 
     bool isReady(void)
     {
@@ -213,6 +268,7 @@ int main(int argc, char **argv)
 
     ros::Subscriber force_local_ros_sub = n.subscribe("force_sensor/force_torque_local_input", 1, &ForceFilter::forceMeasurementLocalCb, &filters);
     ros::Subscriber force_global_ros_sub = n.subscribe("force_sensor/force_torque_global_input", 1, &ForceFilter::forceMeasurementGlobalCb, &filters);
+    ros::Subscriber transformation_matrix_ros_sub = n.subscribe("force_sensor/transformation_matrix_input", 1, &ForceFilter::transformationMatrixCb, &filters);
     
     ros::Publisher force_filtered_pub_ = n.advertise<geometry_msgs::WrenchStamped>("force_sensor/force_torque_output", 1);
     

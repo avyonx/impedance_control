@@ -34,6 +34,9 @@ void aic::setAdaptiveParameterInitialValues(double kp0) {
 	x[1] = 0.0;
 
 	GKp_.setInitialValues(y, x);
+	kp_[0] = kp0;
+	kp_[1] = 0.0;
+	kp_[2] = 0.0;
 }
 
 void aic::setImpedanceFilterParameters(double mass, double damping, double stiffness)
@@ -45,7 +48,6 @@ void aic::setImpedanceFilterParameters(double mass, double damping, double stiff
 
 void aic::setAdaptiveParameters(double gamma1, double gamma2, double wp, double wd)
 {
-	printf("Gama %lf, %lf\n", gamma1, gamma2);
 	gamma_[0] = gamma1;
 	gamma_[1] = gamma2;
 	wp_ = wp;

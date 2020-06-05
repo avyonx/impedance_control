@@ -1,5 +1,6 @@
 #include <impedance_control/impedance_control.h>
 #include <math.h>
+#include <memory>
 
 ImpedanceControl::ImpedanceControl(int rate):
     M_(0),
@@ -10,7 +11,6 @@ ImpedanceControl::ImpedanceControl(int rate):
     Xc_[0] = 0.0;
     Xc_[1] = 0.0;
     Xc_[2] = 0.0;
-
 }
 
 void ImpedanceControl::setImpedanceFilterMass(double mass) {

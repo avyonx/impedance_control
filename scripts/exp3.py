@@ -7,7 +7,7 @@ import time
 
 from geometry_msgs.msg import PoseStamped, WrenchStamped
 
-class exp1():
+class exp3():
 
     def __init__(self):
 
@@ -15,14 +15,14 @@ class exp1():
         self.force_torque_ref_pub = rospy.Publisher('/uav/impedance_control/force_torque_ref_input', WrenchStamped, queue_size=1)
         # Services for requesting trajectory interpolation
         rospy.sleep(5.)
-        self.force_setpoint_flag = [False, True]
-        self.pose_setpoint_flag = [False, True]
+        self.force_setpoint_flag = [False]
+        self.pose_setpoint_flag = [False]
 
-        self.force_setpoint = [WrenchStamped(), WrenchStamped()]
-        self.pose_setpoint = [PoseStamped(), PoseStamped()]
+        self.force_setpoint = [WrenchStamped()]
+        self.pose_setpoint = [PoseStamped()]
 
         self.pose_setpoint[0].header.stamp = rospy.Time.now()
-        self.pose_setpoint[0].pose.position.x = 1.01;
+        self.pose_setpoint[0].pose.position.x = 1.00;
         self.pose_setpoint[0].pose.position.y = 0;
         self.pose_setpoint[0].pose.position.z = 1;
         self.pose_setpoint[0].pose.orientation.x = 0;
@@ -30,22 +30,12 @@ class exp1():
         self.pose_setpoint[0].pose.orientation.z = 0;
         self.pose_setpoint[0].pose.orientation.w = 1;
 
-        self.pose_setpoint[1].header.stamp = rospy.Time.now()
-        self.pose_setpoint[1].pose.position.x = 0.0;
-        self.pose_setpoint[1].pose.position.y = 0.0;
-        self.pose_setpoint[1].pose.position.z = 1.0;
-        self.pose_setpoint[1].pose.orientation.x = 0.0;
-        self.pose_setpoint[1].pose.orientation.y = 0.0;
-        self.pose_setpoint[1].pose.orientation.z = 0.0;
-        self.pose_setpoint[1].pose.orientation.w = 1.0;
 
+        self.force_setpoint[0].wrench.force.x = 1.0
 
-        self.force_setpoint[0].wrench.force.x = 0.5
-        self.force_setpoint[1].wrench.force.x = 1.0
-
-        self.ramp_velocity = 0.25
+        self.ramp_velocity = 0.05
         self.up = False
-        self.time = 20.0
+        self.time = 30
 
         self.run()
 
@@ -110,5 +100,5 @@ class exp1():
 
 
 if __name__=="__main__":
-    rospy.init_node("exp1")
-    exp1()
+    rospy.init_node("exp3")
+    exp3()

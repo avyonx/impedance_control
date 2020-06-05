@@ -11,11 +11,26 @@
   <arg name="world_name" default="world"/>
   <arg name="verbose" default="false"/>
 
+  <arg name="robot_namespace" default="/"/>
+  <arg name="schunk_robot_type" default="red"/>
+  <arg name="enable_velodyne" default="false"/>
+  <arg name="mount_brick_baskets" default="false"/>
+  <arg name="end_effector_type" default="plate"/>
+
+  <arg name="plate_x" default="0.5"/>
+  <arg name="plate_y" default="0.5"/>
+  <arg name="plate_z" default="0.01"/>
+  <arg name="plate_m" default="0.5"/>
+
+  <arg name="uav_x" default="2"/>
+  <arg name="uav_y" default="2"/>
+
   <arg name="enable_logging" default="true"/>
   <arg name="enable_ground_truth" default="true"/>
   <arg name="log_file" default="uav"/>
 
   <arg name="namespace" default="uav"/>
+  <arg name="namespace_ugv" default="ugv"/>
 
   <arg name="impedance_control_rate" default="100"/>
   <arg name="impedance_control_params_file" default="/config/impedance_control_params.yaml"/>
@@ -24,8 +39,11 @@
 
   <include file="$(find mmuav_gazebo)/launch/uav_attitude_position.launch">
     <arg name="manipulator_type" value="wp_manipulator" />
+    <arg name="use_sim_time" value="$(arg use_sim_time)" />
+    <arg name="x" value="$(arg uav_x)" />
+    <arg name="y" value="$(arg uav_y)" />
   </include>
-  <include file="$(find mmuav_description)/launch/spawn_wall.launch" />
+  <!--include file="$(find mmuav_description)/launch/spawn_wall.launch" /-->
 
   <group ns="$(arg namespace)">
     <node name="impedance_control_node" pkg="impedance_control" type="impedance_control_node" output="screen">
@@ -42,8 +60,24 @@
       <param name="moving_average_sample_number" value="10"/>
       <param name="median_filter_size" value="21"/>
       <param name="pt1_filter_time_constant" value="0.05"/>
-      <remap from="force_sensor/force_torque_global_input" to="/force_sensor/ft_sensor" />
+      <remap from="force_sensor/force_torque_global_input" to="/uav/wp_manipulator/force_sensor/ft_sensor" />
     </node>
   </group>
+
+    <!-- spawn mbzirc bot -->
+    <!--include file="$(find mbzirc_gazebo)/launch/spawn_mbzirc_bot.launch">
+        <arg name="robot_namespace" value="$(arg robot_namespace)"/>
+        <arg name="schunk_robot_type" value="$(arg schunk_robot_type)"/>
+        <arg name="enable_velodyne" value="$(arg enable_velodyne)"/>
+        <arg name="mount_brick_baskets" value="$(arg mount_brick_baskets)"/>
+        <arg name="end_effector_type" value="$(arg end_effector_type)"/>
+        <arg name="plate_x" value="$(arg plate_x)"/>
+        <arg name="plate_y" value="$(arg plate_y)"/>
+        <arg name="plate_z" value="$(arg plate_z)"/>
+        <arg name="plate_m" value="$(arg plate_m)"/>
+    </include-->
+
+  	<!-- launch control -->
+  	<!--include file="$(find mbzirc_gazebo)/launch/husky_with_schunk_pid_control.launch"/-->
 
 </launch>

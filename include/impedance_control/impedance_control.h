@@ -22,5 +22,4 @@ public:
 	void setDeadZone(double dead_zone);
 };
 
-
 #endif

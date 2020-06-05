@@ -306,7 +306,6 @@ public:
         zd[2] = acc_ref_.linear.z;
 
 
-
 		xr_ = aic_control_x_.compute(force_meas_.wrench.force.x, force_torque_ref_.wrench.force.x, xd);
         xKp_ = aic_control_x_.getAdaptiveEnvironmentStiffnessGainKp();
         xq_ = aic_control_x_.getQ();
@@ -383,7 +382,7 @@ int main(int argc, char **argv) {
 	geometry_msgs::PoseStamped commanded_position_msg;
 	std_msgs::Float64MultiArray state_msg;
 
-	state_msg.data.resize(30);
+	state_msg.data.resize(31);
 
 	ros::init(argc, argv, "impedance_control_node");
 	ros::NodeHandle n, private_node_handle_("~");
@@ -484,6 +483,7 @@ int main(int argc, char **argv) {
                 state_msg.data[j++] = xq;
                 state_msg.data[j++] = yq;
                 state_msg.data[j++] = zq;
+				state_msg.data[j++] = time;
                 state_pub_.publish(state_msg);
         	}
         }
