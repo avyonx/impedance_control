@@ -10,6 +10,7 @@
   <arg name="debug" default="false"/>
   <arg name="world_name" default="world"/>
   <arg name="verbose" default="false"/>
+  <arg name="start_gazebo" default="true"/>
 
   <arg name="robot_namespace" default="/"/>
   <arg name="schunk_robot_type" default="red"/>
@@ -42,6 +43,7 @@
     <arg name="use_sim_time" value="$(arg use_sim_time)" />
     <arg name="x" value="$(arg uav_x)" />
     <arg name="y" value="$(arg uav_y)" />
+    <arg name="start_gazebo" value="$(arg start_gazebo)" />
   </include>
   <!--include file="$(find mmuav_description)/launch/spawn_wall.launch" /-->
 
