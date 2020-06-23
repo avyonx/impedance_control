@@ -11,7 +11,7 @@
 
 class ForceFilter {
 private:
-    bool force_start_flag_, force_filters_initialized_;
+    bool force_start_flag_, force_filters_initialized_, invert_;
 
     int moving_average_sample_number_, rate_;
 
@@ -29,17 +29,31 @@ private:
 
     Tf1 force_z_pt1_filt, force_x_pt1_filt, force_y_pt1_filt;
 
-    Eigen::Matrix4d T_LG_;
+    Eigen::Matrix4d T_LG_, Ti_;
 public:
-    ForceFilter(int rate):
+    ForceFilter(int rate, bool invert):
         rate_(rate),
         force_start_flag_(false),
-        force_filters_initialized_(false) {
+        force_filters_initialized_(false),
+        invert_(invert){
 
         T_LG_ << 1,  0,  0,  0,
                  0,  1,  0,  0,
                  0,  0,  1,  0,
                  0,  0,  0,  1;
+
+        if (invert_) {
+            Ti_ <<  -1,   0,   0,   0,
+                     0,  -1,   0,   0,
+                     0,   0,  -1,   0,
+                     0,   0,   0,   1;
+        }
+        else {
+            Ti_ <<   1,  0,  0,  0,
+                     0,  1,  0,  0,
+                     0,  0,  1,  0,
+                     0,  0,  0,  1;
+        }
     };
 
     ~ForceFilter() {
@@ -140,8 +154,8 @@ public:
              0,  0,  1,  msg.wrench.torque.z,
              0,  0,  0,  1;
 
-        Fg = T_LG_ * F;
-        Tg = T_LG_ * T;
+        Fg = Ti_ * T_LG_ * F;
+        Tg = Ti_ * T_LG_ * T;
 
         force_z_meas_[moving_average_sample_number_-1] = force_z_pt1_filt.getDiscreteOutput(force_z_med_filt.filter(Fg(2, 3)));
         force_x_meas_[moving_average_sample_number_-1] = force_x_pt1_filt.getDiscreteOutput(force_x_med_filt.filter(Fg(0, 3)));
@@ -155,9 +169,9 @@ public:
     {
         if (msg.data.size() == 16)
         {
-            T_LG_ << msg.data[0],  msg.data[1],  msg.data[2],  msg.data[3],
-                     msg.data[4],  msg.data[5],  msg.data[6],  msg.data[7],
-                     msg.data[8],  msg.data[9],  msg.data[10], msg.data[11],
+            T_LG_ << msg.data[0],  msg.data[1],  msg.data[2],  0.0,
+                     msg.data[4],  msg.data[5],  msg.data[6],  0.0,
+                     msg.data[8],  msg.data[9],  msg.data[10], 0.0,
                      msg.data[12], msg.data[13], msg.data[14], msg.data[15];
         }
     }
@@ -258,13 +272,15 @@ int main(int argc, char **argv)
     geometry_msgs::WrenchStamped filtered_ft_sensor_msg;
     int rate, masn, mfs, counter;
     float pt1_t;
+    bool invert_meas;
 
     private_node_handle_.param("rate", rate, int(1000));
     private_node_handle_.param("moving_average_sample_number", masn, int(10));
     private_node_handle_.param("median_filter_size", mfs, int(21));
     private_node_handle_.param("pt1_filter_time_constant", pt1_t, float(0.05));
+    private_node_handle_.param("invert_force_measurements", invert_meas, bool(false));
 
-    ForceFilter filters(rate);
+    ForceFilter filters(rate, invert_meas);
 
     ros::Subscriber force_local_ros_sub = n.subscribe("force_sensor/force_torque_local_input", 1, &ForceFilter::forceMeasurementLocalCb, &filters);
     ros::Subscriber force_global_ros_sub = n.subscribe("force_sensor/force_torque_global_input", 1, &ForceFilter::forceMeasurementGlobalCb, &filters);

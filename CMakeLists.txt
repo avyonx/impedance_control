@@ -70,6 +70,3 @@ target_link_libraries(impedance_control_node ${catkin_LIBRARIES} yaml-cpp impeda
 
 add_executable(force_filter_node src/force_filter_node.cpp)
 target_link_libraries(force_filter_node ${catkin_LIBRARIES} Tf2 median_filter Tf1)
-
-#add_executable(impedance_control_node1 src/impedance_control_node1.cpp)
-#target_link_libraries(impedance_control_node1 ${catkin_LIBRARIES} yaml-cpp mraic median_filter)

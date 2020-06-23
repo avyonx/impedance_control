@@ -10,13 +10,26 @@
   <arg name="debug" default="false"/>
   <arg name="world_name" default="world"/>
   <arg name="verbose" default="false"/>
-  <arg name="start_gazebo" default="true"/>
 
   <arg name="robot_namespace" default="/"/>
   <arg name="schunk_robot_type" default="red"/>
   <arg name="enable_velodyne" default="false"/>
   <arg name="mount_brick_baskets" default="false"/>
   <arg name="end_effector_type" default="plate"/>
+
+  <arg name="model_type" default="uav" />
+
+  <arg name="name" default="uav" />
+  <arg name="x" default="2.0" />
+  <arg name="y" default="2.0" />
+  <arg name="z" default="0.0" />
+
+  <arg name="manipulator_type" default="wp_manipulator" />
+  <arg name="manipulator_tool" default="rod" />
+  <arg name="start_gazebo" default="true" />
+  <arg name="mount_magnet" default="false" />
+  <arg name="mount_magnet_with_disk" default="false" />
+  <arg name="magnet_dipole_moment_z" default="1" />
 
   <arg name="plate_x" default="0.5"/>
   <arg name="plate_y" default="0.5"/>
@@ -38,14 +51,45 @@
 
   <node name="sor_pgs_w" pkg="dynamic_reconfigure" type="dynparam" args="set gazebo sor_pgs_w 1.0"/>
 
-  <include file="$(find mmuav_gazebo)/launch/uav_attitude_position.launch">
-    <arg name="manipulator_type" value="wp_manipulator" />
-    <arg name="use_sim_time" value="$(arg use_sim_time)" />
-    <arg name="x" value="$(arg uav_x)" />
-    <arg name="y" value="$(arg uav_y)" />
-    <arg name="start_gazebo" value="$(arg start_gazebo)" />
+  <!-- Launch gazebo -->
+  <group if="$(arg start_gazebo)">
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="debug" value="$(arg debug)" />
+        <arg name="gui" value="$(arg gui)" />
+        <arg name="paused" value="$(arg paused)"/>
+        <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+        <arg name="headless" value="$(arg headless)"/>
+    </include>
+  </group>
+
+  <include file="$(find mmuav_description)/launch/spawn_uav.launch">
+      <arg name="model_type" value="$(arg model_type)" />
+      <arg name="name" value="$(arg name)" />
+      <arg name="x" value="$(arg x)" />
+      <arg name="y" value="$(arg y)" />
+      <arg name="z" value="$(arg z)" />
+      <arg name="manipulator_type" value="$(arg manipulator_type)" />
+      <arg name="manipulator_tool" value="$(arg manipulator_tool)" />
+      <arg name="mount_magnet" value="$(arg mount_magnet)" />
+      <arg name="mount_magnet_with_disk" value="$(arg mount_magnet_with_disk)" />
+      <arg name="magnet_dipole_moment_z" value="$(arg magnet_dipole_moment_z)" />
   </include>
-  <!--include file="$(find mmuav_description)/launch/spawn_wall.launch" /-->
+
+  <!-- Start attitude height control -->
+  <include file="$(find mmuav_control)/launch/rotors_variation_attitude_position_control.launch">
+      <arg name="namespace" value="$(arg name)" />
+      <arg name="x" value="$(arg x)" />
+      <arg name="y" value="$(arg y)" />
+      <arg name="z" value="$(arg z)" />
+      <arg name="run_trajectory_node" value="$(eval 'none' == manipulator_type)" />
+  </include>
+
+  <group if="$(eval 'wp_manipulator' == manipulator_type)">
+    <include file="$(find aerial_manipulators_control)/launch/wp_manipulator_gazebo_control.launch">
+        <arg name="namespace" value="$(arg name)" />
+        <arg name="velocity_control_file" default="$(find mmuav_control)/config/wp_manipulator_velocity_control.yaml"/>
+    </include>
+  </group>
 
   <group ns="$(arg namespace)">
     <node name="impedance_control_node" pkg="impedance_control" type="impedance_control_node" output="screen">
@@ -62,12 +106,29 @@
       <param name="moving_average_sample_number" value="10"/>
       <param name="median_filter_size" value="21"/>
       <param name="pt1_filter_time_constant" value="0.05"/>
-      <remap from="force_sensor/force_torque_global_input" to="/uav/wp_manipulator/force_sensor/ft_sensor" />
+      <param name="invert_force_measurements" value="true"/>
+      <remap from="force_sensor/force_torque_local_input" to="wp_manipulator/force_sensor/ft_sensor" />
+      <remap from="force_sensor/transformation_matrix_input" to="aerial_manipulator_control/transformation/world_end_effector" />
+    </node>
+
+    <node name="wp_manipulator_control" pkg="aerial_manipulators_control" type="wp_manipulator_control">
+        <param name="rate" value="30"/>
+        <param name="robot_name" value="wp_manipulator"/>
+        <param name="joint_group_name" value="wp_manipulator_arm"/>
+        <param name="parameters_file" value="/config/wp_manipulator_dh_parameters.yaml"/>
+    </node>
+
+    <node name="aerial_manipulator_control" pkg="aerial_manipulators_control" type="aerial_manipulator_control" output="screen">
+        <param name="rate" value="30"/>
+        <param name="simulation" value="$(arg use_sim_time)"/>
+
+        <remap from="aerial_manipulator_control/uav_odometry_meas_input" to="odometry" />
+        <remap from="aerial_manipulator_control/arm_pose_meas_input" to="end_effector/pose" />
     </node>
   </group>
 
     <!-- spawn mbzirc bot -->
-    <!--include file="$(find mbzirc_gazebo)/launch/spawn_mbzirc_bot.launch">
+    <include file="$(find mbzirc_gazebo)/launch/spawn_mbzirc_bot.launch">
         <arg name="robot_namespace" value="$(arg robot_namespace)"/>
         <arg name="schunk_robot_type" value="$(arg schunk_robot_type)"/>
         <arg name="enable_velodyne" value="$(arg enable_velodyne)"/>
@@ -77,9 +138,9 @@
         <arg name="plate_y" value="$(arg plate_y)"/>
         <arg name="plate_z" value="$(arg plate_z)"/>
         <arg name="plate_m" value="$(arg plate_m)"/>
-    </include-->
+    </include>
 
   	<!-- launch control -->
-  	<!--include file="$(find mbzirc_gazebo)/launch/husky_with_schunk_pid_control.launch"/-->
+  	<include file="$(find mbzirc_gazebo)/launch/husky_with_schunk_pid_control.launch"/>
 
 </launch>

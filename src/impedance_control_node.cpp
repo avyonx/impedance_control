@@ -53,7 +53,7 @@ private:
 
 	std::vector<double> kp1_, kp2_, wp_, wd_, M_, B_, K_, dead_zone_, kp0_;
 
-	rosgraph_msgs::Clock clock_, clock_old_;
+	rosgraph_msgs::Clock clock_;
 	geometry_msgs::WrenchStamped force_meas_, force_torque_ref_;
 	geometry_msgs::PoseStamped pose_ref_, pose_meas_;
 	geometry_msgs::Twist vel_ref_, acc_ref_;
