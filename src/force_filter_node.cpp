@@ -35,7 +35,10 @@ public:
         rate_(rate),
         force_start_flag_(false),
         force_filters_initialized_(false),
-        invert_(invert){
+        invert_(invert),
+        force_x_offset_(0.0),
+        force_y_offset_(0.0),
+        force_z_offset_(0.0) {
 
         T_LG_ << 1,  0,  0,  0,
                  0,  1,  0,  0,

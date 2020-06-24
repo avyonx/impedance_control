@@ -101,6 +101,7 @@
       <param name="impedance_control_params_file" value="$(arg use_sim_time)"/>
       <param name="simulation" value="$(arg use_sim_time)"/>
     </node>
+
     <node name="force_filter_node" pkg="impedance_control" type="force_filter_node">
       <param name="rate" value="1000"/>
       <param name="moving_average_sample_number" value="10"/>
