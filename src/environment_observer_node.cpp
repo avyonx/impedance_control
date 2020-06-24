@@ -153,7 +153,8 @@ int main(int argc, char **argv) {
 	ros::Rate loop_rate(rate);
 
 	while (ros::Time::now().toSec() == 0 && ros::ok()) {
-        ROS_INFO("Waiting for clock server to start");
+        ROS_INFO("Waiting for clock server to start 2");
+        ros::Duration(0.5).sleep();
     }
     ROS_INFO("Received first clock message");
 
