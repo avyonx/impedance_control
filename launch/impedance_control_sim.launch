@@ -98,7 +98,7 @@
       <remap from="impedance_control/pose_output" to="pose_ref" />
 
       <param name="rate" value="100"/>
-      <param name="impedance_control_params_file" value="$(arg use_sim_time)"/>
+      <param name="impedance_control_params_file" value="$(arg impedance_control_params_file)"/>
       <param name="simulation" value="$(arg use_sim_time)"/>
     </node>
 

@@ -48,6 +48,7 @@ private:
 	bool simulation_flag_, force_msg_received_, reconfigure_start_;
 	bool pose_meas_received_, impedance_start_flag_;
 	double *xr_, *xc_, *yr_, *yc_, *zr_, *zc_, *xKp_, *yKp_, *zKp_;
+	double qxc_[3], qyc_[3], qzc_[3], qwc_[3];
 	double xq_, yq_, zq_;
 	int rate_;
 
@@ -127,6 +128,11 @@ public:
 		pose_meas_received_ = true;
 		pose_meas_.header = msg.header;
 		pose_meas_.pose = msg.pose.pose;
+	};
+
+	void poseMeasPoseStampedCb(const geometry_msgs::PoseStamped &msg) {
+		pose_meas_received_ = true;
+		pose_meas_ = msg;
 	};
 
 	void reconfigureCb(impedance_control::ImpedanceControlConfig &config, uint32_t level) {
@@ -305,6 +311,22 @@ public:
         zd[1] = vel_ref_.linear.z;
         zd[2] = acc_ref_.linear.z;
 
+        qxc_[0] = pose_ref_.pose.orientation.x;
+		qxc_[1] = 0.0;
+		qxc_[2] = 0.0;
+
+		qyc_[0] = pose_ref_.pose.orientation.y;
+		qyc_[1] = 0.0;
+		qyc_[2] = 0.0;
+
+		qzc_[0] = pose_ref_.pose.orientation.z;
+		qzc_[1] = 0.0;
+		qzc_[2] = 0.0;
+
+		qwc_[0] = pose_ref_.pose.orientation.w;
+		qwc_[1] = 0.0;
+		qwc_[2] = 0.0;
+
 
 		xr_ = aic_control_x_.compute(force_meas_.wrench.force.x, force_torque_ref_.wrench.force.x, xd);
         xKp_ = aic_control_x_.getAdaptiveEnvironmentStiffnessGainKp();
@@ -320,6 +342,7 @@ public:
         zKp_ = aic_control_z_.getAdaptiveEnvironmentStiffnessGainKp();
         zq_ = aic_control_z_.getQ();
         zc_ = impedance_control_z_.impedanceFilter(force_meas_.wrench.force.z, force_torque_ref_.wrench.force.z, zr_);
+
 	};
 
 	double *getXc() {
@@ -333,6 +356,22 @@ public:
     double *getZc() {
         return zc_;
     };
+
+	double *getQXc() {
+		return qxc_;
+	};
+
+	double *getQYc() {
+		return qyc_;
+	};
+
+	double *getQZc() {
+		return qzc_;
+	};
+
+	double *getQWc() {
+		return qwc_;
+	};
 
     double *getXr() {
         return xr_;
@@ -377,6 +416,7 @@ int main(int argc, char **argv) {
 	bool simulation_flag;
 	double time, time_old, dt;
 	double *xc, *yc, *zc, *xr, *yr, *zr, *xKp, *yKp, *zKp;
+	double *qxc, *qyc, *qzc, *qwc;
 	double xq, yq, zq;
 
 	geometry_msgs::PoseStamped commanded_position_msg;
@@ -402,6 +442,7 @@ int main(int argc, char **argv) {
 	ros::Subscriber trajectory_ref_ros_sub = n.subscribe("impedance_control/trajectory_ref_input", 1, &ImpedanceControlNode::trajectoryRefCb, &impedance_control);
 	ros::Subscriber force_torque_ref_ros_sub = n.subscribe("impedance_control/force_torque_ref_input", 1, &ImpedanceControlNode::forceTorqueRefCb, &impedance_control);
 	ros::Subscriber pose_meas_odometry_sub = n.subscribe("impedance_control/odometry_meas_input", 1, &ImpedanceControlNode::poseMeasOdomCb, &impedance_control);
+	ros::Subscriber pose_meas_posestamped_sub = n.subscribe("impedance_control/pose_stamped_meas_input", 1, &ImpedanceControlNode::poseMeasPoseStampedCb, &impedance_control);
 
 	ros::Publisher pose_stamped_commanded_pub_ = n.advertise<geometry_msgs::PoseStamped>("impedance_control/pose_stamped_output", 1);
 	ros::Publisher pose_commanded_pub_ = n.advertise<geometry_msgs::Pose>("impedance_control/pose_output", 1);
@@ -448,6 +489,10 @@ int main(int argc, char **argv) {
         		xc = impedance_control.getXc();
                 yc = impedance_control.getYc();
                 zc = impedance_control.getZc();
+				qxc = impedance_control.getQXc();
+				qyc = impedance_control.getQYc();
+				qzc = impedance_control.getQZc();
+				qwc = impedance_control.getQWc();
                 xr = impedance_control.getXr();
                 yr = impedance_control.getYr();
                 zr = impedance_control.getZr();
@@ -462,10 +507,10 @@ int main(int argc, char **argv) {
                 commanded_position_msg.pose.position.x = xc[0];
                 commanded_position_msg.pose.position.y = yc[0];
                 commanded_position_msg.pose.position.z = zc[0];
-                commanded_position_msg.pose.orientation.x = 0;
-                commanded_position_msg.pose.orientation.y = 0;
-                commanded_position_msg.pose.orientation.z = 0;
-                commanded_position_msg.pose.orientation.w = 1;
+                commanded_position_msg.pose.orientation.x = qxc[0];
+                commanded_position_msg.pose.orientation.y = qyc[0];
+                commanded_position_msg.pose.orientation.z = qzc[0];
+                commanded_position_msg.pose.orientation.w = qwc[0];
                 pose_stamped_commanded_pub_.publish(commanded_position_msg);
                 pose_commanded_pub_.publish(commanded_position_msg.pose);
 

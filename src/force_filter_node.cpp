@@ -29,7 +29,7 @@ private:
 
     Tf1 force_z_pt1_filt, force_x_pt1_filt, force_y_pt1_filt;
 
-    Eigen::Matrix4d T_LG_, Ti_;
+    Eigen::Matrix4d T_LG_, Ti_, T_force_sensor_;
 public:
     ForceFilter(int rate, bool invert):
         rate_(rate),
@@ -39,6 +39,11 @@ public:
         force_x_offset_(0.0),
         force_y_offset_(0.0),
         force_z_offset_(0.0) {
+
+        T_force_sensor_ <<  1,   0,  0,  0,
+                            0,   1,  0,  0,
+                            0,   0,  1,  0,
+                            0,   0,  0,  1;
 
         T_LG_ << 1,  0,  0,  0,
                  0,  1,  0,  0,
@@ -108,6 +113,51 @@ public:
         }
     };
 
+    void getRotationTranslationMatrix(Eigen::Matrix4d &rotationTranslationMatrix, float *orientationEuler) {
+        float r11, r12, r13, r21, r22, r23;
+        float r31, r32, r33;
+
+        float x, y, z;
+
+        x = orientationEuler[0];
+        y = orientationEuler[1];
+        z = orientationEuler[2];
+
+        r11 = cos(y)*cos(z);
+
+        r12 = cos(z)*sin(x)*sin(y) - cos(x)*sin(z);
+
+        r13 = sin(x)*sin(z) + cos(x)*cos(z)*sin(y);
+
+        r21 = cos(y)*sin(z);
+
+        r22 = cos(x)*cos(z) + sin(x)*sin(y)*sin(z);
+
+        r23 = cos(x)*sin(y)*sin(z) - cos(z)*sin(x);
+
+        r31 = -sin(y);
+
+        r32 = cos(y)*sin(x);
+
+        r33 = cos(x)*cos(y);
+
+        rotationTranslationMatrix << r11, r12, r13, 0.0,
+                                     r21, r22, r23, 0.0,
+                                     r31, r32, r33, 0.0,
+                                     0.0,   0.0,   0.0,   1.0;
+    };
+
+    void set_transform(float roll, float pitch, float yaw)
+    {
+        float euler[3];
+
+        euler[0] = roll;
+        euler[1] = pitch;
+        euler[2] = yaw;
+
+        getRotationTranslationMatrix(T_force_sensor_, euler);
+    }
+
     void forceMeasurementGlobalCb(const geometry_msgs::WrenchStamped &msg)
     {
         if (!force_start_flag_) force_start_flag_ = true;
@@ -157,8 +207,8 @@ public:
              0,  0,  1,  msg.wrench.torque.z,
              0,  0,  0,  1;
 
-        Fg = Ti_ * T_LG_ * F;
-        Tg = Ti_ * T_LG_ * T;
+        Fg = Ti_ * T_LG_ * T_force_sensor_ * F;
+        Tg = Ti_ * T_LG_ * T_force_sensor_ * T;
 
         force_z_meas_[moving_average_sample_number_-1] = force_z_pt1_filt.getDiscreteOutput(force_z_med_filt.filter(Fg(2, 3)));
         force_x_meas_[moving_average_sample_number_-1] = force_x_pt1_filt.getDiscreteOutput(force_x_med_filt.filter(Fg(0, 3)));
@@ -274,7 +324,7 @@ int main(int argc, char **argv)
     ros::NodeHandle private_node_handle_("~"), n;
     geometry_msgs::WrenchStamped filtered_ft_sensor_msg;
     int rate, masn, mfs, counter;
-    float pt1_t;
+    float pt1_t, t_roll, t_pitch, t_yaw;
     bool invert_meas;
 
     private_node_handle_.param("rate", rate, int(1000));
@@ -282,8 +332,13 @@ int main(int argc, char **argv)
     private_node_handle_.param("median_filter_size", mfs, int(21));
     private_node_handle_.param("pt1_filter_time_constant", pt1_t, float(0.05));
     private_node_handle_.param("invert_force_measurements", invert_meas, bool(false));
+    private_node_handle_.param("force_roll_transform", t_roll, float(0.0));
+    private_node_handle_.param("force_pitch_transform", t_pitch, float(0.0));
+    private_node_handle_.param("force_yaw_transform", t_yaw, float(0.0));
 
     ForceFilter filters(rate, invert_meas);
+
+    filters.set_transform(t_roll, t_pitch, t_yaw);
 
     ros::Subscriber force_local_ros_sub = n.subscribe("force_sensor/force_torque_local_input", 1, &ForceFilter::forceMeasurementLocalCb, &filters);
     ros::Subscriber force_global_ros_sub = n.subscribe("force_sensor/force_torque_global_input", 1, &ForceFilter::forceMeasurementGlobalCb, &filters);
