@@ -70,3 +70,6 @@ target_link_libraries(impedance_control_node ${catkin_LIBRARIES} yaml-cpp impeda
 
 add_executable(force_filter_node src/force_filter_node.cpp)
 target_link_libraries(force_filter_node ${catkin_LIBRARIES} Tf2 median_filter Tf1)
+
+add_executable(wall_planner_node src/asap_wall_planner.cpp)
+target_link_libraries(wall_planner_node ${catkin_LIBRARIES})
