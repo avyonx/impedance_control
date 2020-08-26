@@ -48,8 +48,8 @@
   <arg name="namespace" default="uav"/>
   <arg name="namespace_ugv" default="ugv"/>
 
-  <arg name="aerial_manipulator_control_rate" default="100"/>
-  <arg name="aerial_manipulator_control_params_file" default="/config/aerial_manipulator_parameters.yaml"/>
+  <arg name="impedance_control_rate" default="100"/>
+  <arg name="impedance_control_params_file" default="/config/impedance_control_params.yaml"/>
 
   <node name="sor_pgs_w" pkg="dynamic_reconfigure" type="dynparam" args="set gazebo sor_pgs_w 1.0"/>
 
@@ -98,16 +98,14 @@
   </group>
 
   <group ns="$(arg namespace)">
-    <node name="aerial_manipulator_control" pkg="aerial_manipulators_control" type="aerial_manipulator_control" output="screen">
-      <remap from="aerial_manipulator_control/force_torque_meas_input" to="force_sensor/force_torque_output" />
-      <remap from="aerial_manipulator_control/uav_odometry_meas_input" to="odometry" />
-      <remap from="aerial_manipulator_control/pose_output" to="pose_ref" />
+    <node name="impedance_control_node" pkg="impedance_control" type="impedance_control_node" output="screen">
+      <remap from="impedance_control/force_torque_meas_input" to="force_sensor/force_torque_output" />
+      <remap from="impedance_control/odometry_meas_input" to="odometry" />
+      <remap from="impedance_control/pose_output" to="pose_ref" />
 
-      <param name="rate" value="$(arg aerial_manipulator_control_rate)"/>
-      <param name="parameters_file" value="$(arg aerial_manipulator_control_params_file)"/>
+      <param name="rate" value="100"/>
+      <param name="impedance_control_params_file" value="$(arg impedance_control_params_file)"/>
       <param name="simulation" value="$(arg use_sim_time)"/>
-      <param name="robot_name" value="wp_manipulator"/>
-      <param name="joint_group_name" value="wp_manipulator_arm"/>
     </node>
     <node name="force_filter_node" pkg="impedance_control" type="force_filter_node">
       <param name="rate" value="1000"/>
@@ -117,6 +115,21 @@
       <param name="invert_force_measurements" value="true"/>
       <remap from="force_sensor/force_torque_local_input" to="wp_manipulator/force_sensor/ft_sensor" />
       <remap from="force_sensor/transformation_matrix_input" to="aerial_manipulator_control/transformation/world_end_effector" />
+    </node>
+
+    <node name="wp_manipulator_control" pkg="aerial_manipulators_control" type="wp_manipulator_control">
+        <param name="rate" value="30"/>
+        <param name="robot_name" value="wp_manipulator"/>
+        <param name="joint_group_name" value="wp_manipulator_arm"/>
+        <param name="parameters_file" value="/config/wp_manipulator_dh_parameters.yaml"/>
+    </node>
+
+    <node name="aerial_manipulator_control" pkg="aerial_manipulators_control" type="aerial_manipulator_control" output="screen">
+        <param name="rate" value="30"/>
+        <param name="simulation" value="$(arg use_sim_time)"/>
+
+        <remap from="aerial_manipulator_control/uav_odometry_meas_input" to="odometry" />
+        <remap from="aerial_manipulator_control/arm_pose_meas_input" to="end_effector/pose" />
     </node>
 
     <!-- Load parameters -->
