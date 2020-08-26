@@ -17,6 +17,7 @@
   <arg name="mount_brick_baskets" default="false"/>
   <arg name="end_effector_type" default="plate"/>
   <arg name="mount_velodyne" default="true"/>
+  <arg name="mount_stereo_cam" default="true"/>
 
   <arg name="model_type" default="uav" />
 
@@ -77,7 +78,8 @@
       <arg name="mount_magnet_with_disk" value="$(arg mount_magnet_with_disk)" />
       <arg name="magnet_dipole_moment_z" value="$(arg magnet_dipole_moment_z)" />
       <arg name="mount_velodyne" value="$(arg mount_velodyne)" />
-  </include>
+      <arg name="mount_stereo_cam" value="$(arg mount_stereo_cam)" />
+  </include> 
 
   <!-- Start attitude height control -->
   <include file="$(find mmuav_control)/launch/rotors_variation_attitude_position_control.launch">
