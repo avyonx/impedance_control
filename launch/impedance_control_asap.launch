@@ -99,7 +99,7 @@
     <node name="aerial_manipulator_control" pkg="aerial_manipulators_control" type="aerial_manipulator_control" output="screen">
       <remap from="aerial_manipulator_control/force_torque_meas_input" to="force_sensor/force_torque_output" />
       <remap from="aerial_manipulator_control/uav_odometry_meas_input" to="odometry" />
-      <remap from="aerial_manipulator_control/pose_output" to="pose_ref" />
+      <remap from="aerial_manipulator_control/uav/pose_output" to="pose_ref" />
 
       <param name="rate" value="$(arg aerial_manipulator_control_rate)"/>
       <param name="parameters_file" value="$(arg aerial_manipulator_control_params_file)"/>
