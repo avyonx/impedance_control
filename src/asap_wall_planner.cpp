@@ -164,7 +164,7 @@ int main(int argc, char **argv) {
   auto traj_visualizer =
       nh.advertise<visualization_msgs::Marker>("wall_path", 1);
   auto pose_ref = nh.advertise<geometry_msgs::PoseStamped>(
-      "impedance_control/pose_stamped_ref_input", 1);
+      "reference", 1);
 
   auto state = planner_state::OFF;
   std::vector<geometry_msgs::PoseStamped> trajPoints;
