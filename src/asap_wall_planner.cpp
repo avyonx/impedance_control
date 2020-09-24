@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
   ros::init(argc, argv, "wall_touching_planner");
   ros::NodeHandle nh;
   auto pose_handler =
-      TopicHandler<geometry_msgs::PoseStamped>(nh, "plane/normal");
+      TopicHandler<geometry_msgs::PoseStamped>(nh, "plane/normal", 5);
   auto odom_handler = TopicHandler<nav_msgs::Odometry>(nh, "odometry");
   auto traj_visualizer =
       nh.advertise<visualization_msgs::Marker>("wall_path", 1);
@@ -202,7 +202,7 @@ int main(int argc, char **argv) {
         p.pose.orientation.w = 1;
         trajPoints.emplace_back(p);
         trajPoints.emplace_back(get_pose_offset(pose_handler.getData(), 2));
-        trajPoints.emplace_back(get_pose_offset(pose_handler.getData(), 0.75));
+        trajPoints.emplace_back(get_pose_offset(pose_handler.getData(), 1.25));
         trajPoints = interpolate_points(trajPoints);
         traj_visualizer.publish(get_marker(trajPoints));
 
