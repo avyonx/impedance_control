@@ -8,7 +8,7 @@
   <arg name="gui" default="true"/>
   <arg name="headless" default="false"/>
   <arg name="debug" default="false"/>
-  <arg name="world_name" default="worlds/empty.world"/>
+  <arg name="world_name" default="$(find larics_gazebo_worlds)/worlds/wall_inspection.world"/>
   <arg name="verbose" default="false"/>
 
   <arg name="robot_namespace" default="/"/>
