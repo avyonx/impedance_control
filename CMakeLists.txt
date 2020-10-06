@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(impedance_control)
 
+set (CMAKE_CXX_STANDARD 11)
+
 find_package(catkin REQUIRED COMPONENTS
     roscpp
     roslib
@@ -56,14 +58,8 @@ target_link_libraries(median_filter ${catkin_LIBRARIES})
 add_library(impedance_control src/impedance_control.cpp)
 target_link_libraries(impedance_control ${catkin_LIBRARIES} Tf2)
 
-add_library(environment_observer src/environment_observer.cpp)
-target_link_libraries(environment_observer ${catkin_LIBRARIES})
-
 add_library(aic src/aic.cpp)
 target_link_libraries(aic ${catkin_LIBRARIES} Tf1 Tf2 function)
-
-add_executable(environment_observer_node src/environment_observer_node.cpp)
-target_link_libraries(environment_observer_node ${catkin_LIBRARIES} environment_observer)
 
 add_executable(impedance_control_node src/impedance_control_node.cpp)
 target_link_libraries(impedance_control_node ${catkin_LIBRARIES} yaml-cpp impedance_control aic)

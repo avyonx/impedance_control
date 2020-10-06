@@ -26,7 +26,7 @@
   <arg name="y" default="2.0" />
   <arg name="z" default="0.0" />
 
-  <arg name="manipulator_type" default="wp_manipulator" />
+  <arg name="manipulator_type" default="wp_manipulator_3rx" />
   <arg name="manipulator_tool" default="rod" />
   <arg name="start_gazebo" default="true" />
   <arg name="mount_magnet" default="false" />
@@ -48,8 +48,8 @@
   <arg name="namespace" default="uav"/>
   <arg name="namespace_ugv" default="ugv"/>
 
-  <arg name="impedance_control_rate" default="100"/>
-  <arg name="impedance_control_params_file" default="/config/impedance_control_params.yaml"/>
+  <arg name="aerial_manipulator_control_rate" default="100"/>
+  <arg name="aerial_manipulator_control_params_file" default="/config/aerial_manipulator_parameters_3rx.yaml"/>
 
   <node name="sor_pgs_w" pkg="dynamic_reconfigure" type="dynparam" args="set gazebo sor_pgs_w 1.0"/>
 
@@ -90,10 +90,10 @@
         <arg name="run_trajectory_node" value="$(eval 'none' == manipulator_type)" />
   </include>
 
-  <group if="$(eval 'wp_manipulator' == manipulator_type)">
-    <include file="$(find aerial_manipulators_control)/launch/wp_manipulator_gazebo_control.launch">
+  <group if="$(eval 'wp_manipulator_3rx' == manipulator_type)">
+    <include file="$(find aerial_manipulators_control)/launch/wp_manipulator_3rx_gazebo_control.launch">
         <arg name="namespace" value="$(arg name)" />
-        <arg name="velocity_control_file" default="$(find mmuav_control)/config/wp_manipulator_velocity_control.yaml"/>
+        <arg name="velocity_control_file" default="$(find mmuav_control)/config/wp_manipulator_3rx_velocity_control.yaml"/>
     </include>
   </group>
 
@@ -103,9 +103,11 @@
       <remap from="aerial_manipulator_control/uav_odometry_meas_input" to="odometry" />
       <remap from="aerial_manipulator_control/uav/pose_output" to="pose_ref" />
 
-      <param name="rate" value="100"/>
-      <param name="impedance_control_params_file" value="$(arg impedance_control_params_file)"/>
+      <param name="rate" value="$(arg aerial_manipulator_control_rate)"/>
+      <param name="parameters_file" value="$(arg aerial_manipulator_control_params_file)"/>
       <param name="simulation" value="$(arg use_sim_time)"/>
+      <param name="robot_name" value="wp_manipulator_3rx"/>
+      <param name="joint_group_name" value="wp_manipulator_3rx_arm"/>
     </node>
     <node name="force_filter_node" pkg="impedance_control" type="force_filter_node">
       <param name="rate" value="1000"/>
@@ -115,21 +117,6 @@
       <param name="invert_force_measurements" value="true"/>
       <remap from="force_sensor/force_torque_local_input" to="wp_manipulator/force_sensor/ft_sensor" />
       <remap from="force_sensor/transformation_matrix_input" to="aerial_manipulator_control/transformation/world_end_effector" />
-    </node>
-
-    <node name="wp_manipulator_control" pkg="aerial_manipulators_control" type="wp_manipulator_control">
-        <param name="rate" value="30"/>
-        <param name="robot_name" value="wp_manipulator"/>
-        <param name="joint_group_name" value="wp_manipulator_arm"/>
-        <param name="parameters_file" value="/config/wp_manipulator_dh_parameters.yaml"/>
-    </node>
-
-    <node name="aerial_manipulator_control" pkg="aerial_manipulators_control" type="aerial_manipulator_control" output="screen">
-        <param name="rate" value="30"/>
-        <param name="simulation" value="$(arg use_sim_time)"/>
-
-        <remap from="aerial_manipulator_control/uav_odometry_meas_input" to="odometry" />
-        <remap from="aerial_manipulator_control/arm_pose_meas_input" to="end_effector/pose" />
     </node>
 
     <!-- Load parameters -->
@@ -145,4 +132,5 @@
             <remap from="odometry" to="odometry"/>
     </node-->
   </group>
+
 </launch>
