@@ -12,8 +12,8 @@ rosrun impedance_control wall_planner_node __ns:=uav
 ## Wall planning
 ```
 rosservice call /uav/force_filter/zero_all "{}"
-rosservice call /uav/impedance_control/start "data: true"
-rostopic pub /uav/impedance_control/pose_stamped_ref_input geometry_msgs/PoseStamped "header:
+rosservice call /uav/aerial_manipulator_control/start "data: true"
+rostopic pub /uav/aerial_manipulator_control/pose_stamped_ref_input geometry_msgs/PoseStamped "header:
   seq: 0
   stamp:
     secs: 0
