@@ -3,8 +3,8 @@
 ## Simulation startup
 ```
 roscore
-roslaunch wp_manipulator planning_context.launch
-roslaunch impedance_control impedance_control_asap.launch
+roslaunch wp_manipulator_3rx planning_context.launch
+roslaunch impedance_control impedance_control_asap_3rx.launch
 roslaunch plane_detection_ros plane_detection_wall.launch
 rosrun impedance_control wall_planner_node __ns:=uav 
 ```
