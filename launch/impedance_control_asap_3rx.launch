@@ -8,16 +8,11 @@
   <arg name="gui" default="true"/>
   <arg name="headless" default="false"/>
   <arg name="debug" default="false"/>
-  <arg name="world_name" default="$(find larics_gazebo_worlds)/worlds/wall_inspection.world"/>
+  <arg name="world_name" default="worlds/empty.world"/>
   <arg name="verbose" default="false"/>
 
-  <arg name="robot_namespace" default="/"/>
-  <arg name="schunk_robot_type" default="red"/>
-  <arg name="enable_velodyne" default="false"/>
-  <arg name="mount_brick_baskets" default="false"/>
-  <arg name="end_effector_type" default="plate"/>
-  <arg name="mount_velodyne" default="true"/>
-  <arg name="mount_stereo_cam" default="true"/>
+  <arg name="mount_velodyne" default="false"/>
+  <arg name="mount_stereo_cam" default="false"/>
 
   <arg name="model_type" default="uav" />
 
@@ -33,11 +28,6 @@
   <arg name="mount_magnet_with_disk" default="false" />
   <arg name="magnet_dipole_moment_z" default="1" />
 
-  <arg name="plate_x" default="0.5"/>
-  <arg name="plate_y" default="0.5"/>
-  <arg name="plate_z" default="0.01"/>
-  <arg name="plate_m" default="0.5"/>
-
   <arg name="uav_x" default="2"/>
   <arg name="uav_y" default="2"/>
 
@@ -46,7 +36,6 @@
   <arg name="log_file" default="uav"/>
 
   <arg name="namespace" default="uav"/>
-  <arg name="namespace_ugv" default="ugv"/>
 
   <arg name="aerial_manipulator_control_rate" default="100"/>
   <arg name="aerial_manipulator_control_params_file" default="/config/aerial_manipulator_parameters_3rx.yaml"/>
@@ -100,13 +89,13 @@
   <group ns="$(arg namespace)">
     <node name="aerial_manipulator_control" pkg="aerial_manipulators_control" type="aerial_manipulator_control" output="screen">
       <remap from="aerial_manipulator_control/force_torque_meas_input" to="force_sensor/force_torque_output" />
-      <remap from="aerial_manipulator_control/uav_odometry_meas_input" to="odometry" />
-      <remap from="aerial_manipulator_control/uav/pose_output" to="pose_ref" />
+      <remap from="aerial_manipulator_control/uav/odometry_meas_input" to="odometry" />
+      <remap from="aerial_manipulator_control/uav/pose_ref_output" to="pose_ref" />
 
       <param name="rate" value="$(arg aerial_manipulator_control_rate)"/>
       <param name="parameters_file" value="$(arg aerial_manipulator_control_params_file)"/>
       <param name="simulation" value="$(arg use_sim_time)"/>
-      <param name="robot_name" value="wp_manipulator_3rx"/>
+      <param name="maniupulator_name" value="wp_manipulator_3rx"/>
       <param name="joint_group_name" value="wp_manipulator_3rx_arm"/>
     </node>
     <node name="force_filter_node" pkg="impedance_control" type="force_filter_node">
