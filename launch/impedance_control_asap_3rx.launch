@@ -27,6 +27,7 @@
   <arg name="mount_magnet" default="false" />
   <arg name="mount_magnet_with_disk" default="false" />
   <arg name="magnet_dipole_moment_z" default="1" />
+  <arg name="turn_off_all_collisions" default="false" />
 
   <arg name="uav_x" default="2"/>
   <arg name="uav_y" default="2"/>
@@ -34,8 +35,6 @@
   <arg name="enable_logging" default="true"/>
   <arg name="enable_ground_truth" default="true"/>
   <arg name="log_file" default="uav"/>
-
-  <arg name="namespace" default="uav"/>
 
   <arg name="aerial_manipulator_control_rate" default="100"/>
   <arg name="aerial_manipulator_control_params_file" default="/config/aerial_manipulator_parameters_3rx.yaml"/>
@@ -68,6 +67,7 @@
       <arg name="magnet_dipole_moment_z" value="$(arg magnet_dipole_moment_z)" />
       <arg name="mount_velodyne" value="$(arg mount_velodyne)" />
       <arg name="mount_stereo_cam" value="$(arg mount_stereo_cam)" />
+      <arg name="turn_off_all_collisions" default="$(arg turn_off_all_collisions)" />
   </include> 
 
   <!-- Start attitude height control -->
@@ -86,11 +86,12 @@
     </include>
   </group>
 
-  <group ns="$(arg namespace)">
+  <group ns="$(arg name)">
     <node name="aerial_manipulator_control" pkg="aerial_manipulators_control" type="aerial_manipulator_control" output="screen">
       <remap from="aerial_manipulator_control/force_torque_meas_input" to="force_sensor/force_torque_output" />
       <remap from="aerial_manipulator_control/uav/odometry_meas_input" to="odometry" />
       <remap from="aerial_manipulator_control/uav/pose_ref_output" to="pose_ref" />
+      <remap from="joint_trajectory" to="arm_joint_trajectory" />
 
       <param name="rate" value="$(arg aerial_manipulator_control_rate)"/>
       <param name="parameters_file" value="$(arg aerial_manipulator_control_params_file)"/>
