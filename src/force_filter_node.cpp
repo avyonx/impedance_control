@@ -307,6 +307,13 @@ public:
     };
 
     bool zeroAllCb(std_srvs::Empty::Request  &req, std_srvs::Empty::Response &res) {
+        force_z_offset_ = 0.0;
+        force_x_offset_ = 0.0;
+        force_y_offset_ = 0.0;
+        torque_x_offset_ = 0.0;
+        torque_y_offset_ = 0.0;
+        torque_z_offset_ = 0.0;
+
         force_z_offset_ = getFilteredForceZ();
         force_x_offset_ = getFilteredForceX();
         force_y_offset_ = getFilteredForceY();
