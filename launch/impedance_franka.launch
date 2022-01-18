@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+
+<launch>
+    <arg name="use_sim_time" default="false"/>
+    <arg name="impedance_control_params_file" default="/config/impedance_control_params.yaml"/>
+
+    <node name="force_filter_node" pkg="impedance_control" type="force_filter_node">
+      <param name="rate" value="200"/>
+      <param name="moving_average_sample_number" value="2"/>
+      <param name="median_filter_size" value="5"/>
+      <param name="pt1_filter_time_constant" value="0.02"/>
+      <param name="invert_force_measurements" value="false"/>
+      <!-- <remap from="force_sensor/force_torque_local_input" to="wp_manipulator/force_sensor/ft_sensor" /> -->
+      <remap from="force_sensor/force_torque_global_input" to="/franka_state_controller/forces_est" />
+    </node>
+
+    <node name="impedance_control_node" pkg="impedance_control" type="impedance_control_node" output="screen">
+      <remap from="impedance_control/force_torque_meas_input" to="force_sensor/force_torque_output" />
+      <remap from="impedance_control/pose_stamped_meas_input" to="/franka_state_controller/link8_pose" />
+      <remap from="impedance_control/pose_stamped_output" to="/panda_pose" />
+
+      <param name="rate" value="100"/>
+      <param name="impedance_control_params_file" value="$(arg impedance_control_params_file)"/>
+      <param name="simulation" value="$(arg use_sim_time)"/>
+    </node>
+
+</launch>
