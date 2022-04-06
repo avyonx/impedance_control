@@ -4,6 +4,7 @@
   <arg name="odometry"    default="odometry" />
   <arg name="traj_in"     default="position_hold/trajectory_out" />
   <arg name="traj_out"    default="position_hold/trajectory" />
+  <arg name="simulation"  default="false" />
 
   <group ns="$(arg namespace)" >
 
@@ -17,6 +18,7 @@
       <param name="impedance_control_params_file" value="/config/impedance_control_params.yaml"/>
       <remap from="impedance_control/pose_command" to="command/pose"/>
       <param name="capability_group" value="ImpedanceControl"/>
+      <param name="simulation"  value="$(arg simulation)"/>
 
       <remap from="impedance_control/odometry_meas_input"  to="$(arg odometry)"/>
       <remap from="impedance_control/trajectory_point_ref_input" to="$(arg traj_in)"/>

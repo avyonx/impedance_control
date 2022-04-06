@@ -511,7 +511,6 @@ int main(int argc, char **argv) {
 
         dt = time - time_old;
         time_old = time;
-
         if (dt > 0.0) {
         	if (impedance_control.isStarted()) {
         		impedance_control.impedanceFilter();
