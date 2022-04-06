@@ -1,0 +1,69 @@
+control:
+
+  rate: 50
+  hover: 0.26
+  
+  pitch_tilt_channel: 5
+  roll_tilt_channel: 6
+
+  default_pwm_pitch: 1500
+  default_pwm_roll: 1500
+
+  ff_gain:
+    velocity:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+    acceleration:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+
+  pos_x:  
+    kp: 1.5
+    ki: 0.4
+    kd: 0.0
+    lim_low: -2
+    lim_high: 2
+  
+  vel_x:
+    kp: 125
+    ki: 1
+    kd: 0.0
+    lim_low: -170
+    lim_high: 170
+
+  pos_y:
+    kp: 1.5
+    ki: 0.4
+    kd: 0.0
+    lim_low: -2
+    lim_high: 2
+   
+  vel_y:
+    kp: 125
+    ki: 1
+    kd: 0.0
+    lim_low: -170
+    lim_high: 170
+
+  pos_z:
+    kp: 1.75
+    ki: 0.05
+    kd: 0.0
+    lim_low: -1.5
+    lim_high: 2.5
+
+  vel_z:
+    kp: 0.2
+    ki: 0.0
+    kd: 0.0
+    lim_low: -0.15
+    lim_high: 0.15
+  
+  yaw_rate:
+    kp: 1.0
+    ki: 0.0
+    kd: 0.2
+    lim_low: -20
+    lim_high: 20

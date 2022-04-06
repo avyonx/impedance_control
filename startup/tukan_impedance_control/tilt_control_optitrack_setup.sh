@@ -1,0 +1,5 @@
+source optitrack_setup.sh
+
+export CONTROL_TYPE=pid_cascade_rotor_tilt
+export CONTROL_PARAMS=custom_config/position_control_tilt_thrust.yaml
+export RC_MAPPING=custom_config/rc_mapping_tukan.yaml
