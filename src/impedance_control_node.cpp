@@ -545,13 +545,18 @@ int main(int argc, char **argv) {
 
 				commanded_traj_point.transforms[0].translation.x = xc[0];
 				commanded_traj_point.transforms[0].translation.y = yc[0];
-				commanded_traj_point.transforms[0].translation.y = zc[0];
+				commanded_traj_point.transforms[0].translation.z = zc[0];
 				commanded_traj_point.velocities[0].linear.x = xc[1];
 				commanded_traj_point.velocities[0].linear.y = yc[1];
-				commanded_traj_point.velocities[0].linear.y = zc[1];
+				commanded_traj_point.velocities[0].linear.z = zc[1];
 				commanded_traj_point.accelerations[0].linear.x = xc[2];
 				commanded_traj_point.accelerations[0].linear.y = yc[2];
 				commanded_traj_point.accelerations[0].linear.y = zc[2];
+				commanded_traj_point.transforms[0].rotation.x = qxc[0];
+				commanded_traj_point.transforms[0].rotation.y = qyc[0];
+				commanded_traj_point.transforms[0].rotation.z = qzc[0];
+				commanded_traj_point.transforms[0].rotation.w = qwc[0];
+
 				trajectory_point_command_pub_.publish(commanded_traj_point);
 				
                 int j = 0;
