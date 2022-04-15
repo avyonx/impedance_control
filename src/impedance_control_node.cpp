@@ -16,6 +16,26 @@
 #include <impedance_control/ImpedanceControlConfig.h>
 
 #include "yaml-cpp/yaml.h"
+#include <tf2/LinearMath/Quaternion.h>
+
+
+const auto getYaw = [](double qx, double qy, double qz, double qw)
+{
+	return atan2(2 * (qw * qz + qx * qy), qw * qw + qx * qx - qy * qy - qz * qz);
+};
+
+const auto calculateQuaternion = [](double heading)
+{
+	tf2::Quaternion q;
+	q.setRPY(0, 0, heading);
+
+	geometry_msgs::Quaternion q_msg;
+	q_msg.x = q.getX();
+	q_msg.y = q.getY();
+	q_msg.z = q.getZ();
+	q_msg.w = q.getW();
+	return q_msg;
+};
 
 class ImpedanceControlNode {
 private:
@@ -261,10 +281,14 @@ public:
 	        pose_ref_.pose.position.x = initial_values[0];
 	        pose_ref_.pose.position.y = initial_values[1];
 	        pose_ref_.pose.position.z = initial_values[2];
-	        pose_ref_.pose.orientation.x = pose_meas_.pose.orientation.x;
-	        pose_ref_.pose.orientation.y = pose_meas_.pose.orientation.y;
-	        pose_ref_.pose.orientation.z = pose_meas_.pose.orientation.z;
-	        pose_ref_.pose.orientation.w = pose_meas_.pose.orientation.w;
+
+		double yaw = getYaw(
+				pose_meas_.pose.orientation.x,
+				pose_meas_.pose.orientation.y,
+				pose_meas_.pose.orientation.z,
+				pose_meas_.pose.orientation.w);
+
+		pose_ref_.pose.orientation = calculateQuaternion(yaw);
 
 	        vel_ref_.linear.x = 0;
 	        vel_ref_.linear.y = 0;
