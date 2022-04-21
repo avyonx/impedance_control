@@ -16,6 +16,26 @@
 #include <impedance_control/ImpedanceControlConfig.h>
 
 #include "yaml-cpp/yaml.h"
+#include <tf2/LinearMath/Quaternion.h>
+
+
+const auto getYaw = [](double qx, double qy, double qz, double qw)
+{
+	return atan2(2 * (qw * qz + qx * qy), qw * qw + qx * qx - qy * qy - qz * qz);
+};
+
+const auto calculateQuaternion = [](double heading)
+{
+	tf2::Quaternion q;
+	q.setRPY(0, 0, heading);
+
+	geometry_msgs::Quaternion q_msg;
+	q_msg.x = q.getX();
+	q_msg.y = q.getY();
+	q_msg.z = q.getZ();
+	q_msg.w = q.getW();
+	return q_msg;
+};
 
 class ImpedanceControlNode {
 private:
@@ -118,6 +138,30 @@ public:
 			acc_ref_.angular.y = msg.points[0].accelerations[0].angular.y;
 			acc_ref_.angular.z = msg.points[0].accelerations[0].angular.z;
 		}
+	}
+
+	void trajectoryPointRefCb(const trajectory_msgs::MultiDOFJointTrajectoryPoint &msg) {
+		pose_ref_.pose.position.x = msg.transforms[0].translation.x;
+		pose_ref_.pose.position.y = msg.transforms[0].translation.y;
+		pose_ref_.pose.position.z = msg.transforms[0].translation.z;
+		pose_ref_.pose.orientation.x = msg.transforms[0].rotation.x;
+		pose_ref_.pose.orientation.y = msg.transforms[0].rotation.y;
+		pose_ref_.pose.orientation.z = msg.transforms[0].rotation.z;
+		pose_ref_.pose.orientation.w = msg.transforms[0].rotation.w;
+
+		vel_ref_.linear.x = msg.velocities[0].linear.x;
+		vel_ref_.linear.y = msg.velocities[0].linear.y;
+		vel_ref_.linear.z = msg.velocities[0].linear.z;
+		vel_ref_.angular.x = msg.velocities[0].angular.x;
+		vel_ref_.angular.y = msg.velocities[0].angular.y;
+		vel_ref_.angular.z = msg.velocities[0].angular.z;
+
+		acc_ref_.linear.x = msg.accelerations[0].linear.x;
+		acc_ref_.linear.y = msg.accelerations[0].linear.y;
+		acc_ref_.linear.z = msg.accelerations[0].linear.z;
+		acc_ref_.angular.x = msg.accelerations[0].angular.x;
+		acc_ref_.angular.y = msg.accelerations[0].angular.y;
+		acc_ref_.angular.z = msg.accelerations[0].angular.z;
 	}
 
 	void forceTorqueRefCb(const geometry_msgs::WrenchStamped &msg) {
@@ -237,10 +281,14 @@ public:
 	        pose_ref_.pose.position.x = initial_values[0];
 	        pose_ref_.pose.position.y = initial_values[1];
 	        pose_ref_.pose.position.z = initial_values[2];
-	        pose_ref_.pose.orientation.x = pose_meas_.pose.orientation.x;
-	        pose_ref_.pose.orientation.y = pose_meas_.pose.orientation.y;
-	        pose_ref_.pose.orientation.z = pose_meas_.pose.orientation.z;
-	        pose_ref_.pose.orientation.w = pose_meas_.pose.orientation.w;
+
+		double yaw = getYaw(
+				pose_meas_.pose.orientation.x,
+				pose_meas_.pose.orientation.y,
+				pose_meas_.pose.orientation.z,
+				pose_meas_.pose.orientation.w);
+
+		pose_ref_.pose.orientation = calculateQuaternion(yaw);
 
 	        vel_ref_.linear.x = 0;
 	        vel_ref_.linear.y = 0;
@@ -421,6 +469,10 @@ int main(int argc, char **argv) {
 
 	geometry_msgs::PoseStamped commanded_position_msg;
 	std_msgs::Float64MultiArray state_msg;
+	trajectory_msgs::MultiDOFJointTrajectoryPoint commanded_traj_point;
+	commanded_traj_point.transforms = std::vector<geometry_msgs::Transform>(1);
+	commanded_traj_point.velocities = std::vector<geometry_msgs::Twist>(1);
+	commanded_traj_point.accelerations = std::vector<geometry_msgs::Twist>(1);
 
 	state_msg.data.resize(31);
 
@@ -440,11 +492,13 @@ int main(int argc, char **argv) {
 	ros::Subscriber force_ros_sub = n.subscribe("impedance_control/force_torque_meas_input", 1, &ImpedanceControlNode::forceMeasurementCb, &impedance_control);
 	ros::Subscriber pose_ref_ros_sub = n.subscribe("impedance_control/pose_stamped_ref_input", 1, &ImpedanceControlNode::poseRefCb, &impedance_control);
 	ros::Subscriber trajectory_ref_ros_sub = n.subscribe("impedance_control/trajectory_ref_input", 1, &ImpedanceControlNode::trajectoryRefCb, &impedance_control);
+	ros::Subscriber trajectory_point_ref_ros_sub = n.subscribe("impedance_control/trajectory_point_ref_input", 1, &ImpedanceControlNode::trajectoryPointRefCb, &impedance_control);
 	ros::Subscriber force_torque_ref_ros_sub = n.subscribe("impedance_control/force_torque_ref_input", 1, &ImpedanceControlNode::forceTorqueRefCb, &impedance_control);
 	ros::Subscriber pose_meas_odometry_sub = n.subscribe("impedance_control/odometry_meas_input", 1, &ImpedanceControlNode::poseMeasOdomCb, &impedance_control);
 	ros::Subscriber pose_meas_posestamped_sub = n.subscribe("impedance_control/pose_stamped_meas_input", 1, &ImpedanceControlNode::poseMeasPoseStampedCb, &impedance_control);
 
 	ros::Publisher pose_stamped_commanded_pub_ = n.advertise<geometry_msgs::PoseStamped>("impedance_control/pose_stamped_output", 1);
+	ros::Publisher trajectory_point_command_pub_ = n.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("impedance_control/trajectory_point_output", 1);
 	ros::Publisher pose_commanded_pub_ = n.advertise<geometry_msgs::Pose>("impedance_control/pose_output", 1);
 	ros::Publisher state_pub_ = n.advertise<std_msgs::Float64MultiArray>("impedance_control/state", 1);
 
@@ -481,7 +535,6 @@ int main(int argc, char **argv) {
 
         dt = time - time_old;
         time_old = time;
-
         if (dt > 0.0) {
         	if (impedance_control.isStarted()) {
         		impedance_control.impedanceFilter();
@@ -514,6 +567,22 @@ int main(int argc, char **argv) {
                 pose_stamped_commanded_pub_.publish(commanded_position_msg);
                 pose_commanded_pub_.publish(commanded_position_msg.pose);
 
+				commanded_traj_point.transforms[0].translation.x = xc[0];
+				commanded_traj_point.transforms[0].translation.y = yc[0];
+				commanded_traj_point.transforms[0].translation.z = zc[0];
+				commanded_traj_point.velocities[0].linear.x = xc[1];
+				commanded_traj_point.velocities[0].linear.y = yc[1];
+				commanded_traj_point.velocities[0].linear.z = zc[1];
+				commanded_traj_point.accelerations[0].linear.x = xc[2];
+				commanded_traj_point.accelerations[0].linear.y = yc[2];
+				commanded_traj_point.accelerations[0].linear.y = zc[2];
+				commanded_traj_point.transforms[0].rotation.x = qxc[0];
+				commanded_traj_point.transforms[0].rotation.y = qyc[0];
+				commanded_traj_point.transforms[0].rotation.z = qzc[0];
+				commanded_traj_point.transforms[0].rotation.w = qwc[0];
+
+				trajectory_point_command_pub_.publish(commanded_traj_point);
+				
                 int j = 0;
                 for (int i = 0; i < 3; i++) {
                 	state_msg.data[j++] = xr[i];

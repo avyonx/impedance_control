@@ -1,0 +1,7 @@
+channel:
+        throttle: 0
+        roll: 2
+        pitch: 3
+        yaw: 1
+        rc_on: 6
+        mode: 5

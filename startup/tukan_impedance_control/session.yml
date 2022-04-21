@@ -1,0 +1,72 @@
+name: tukan_impedance 
+root: ./
+startup_window: roscore 
+pre_window: |
+  source <%= @settings["setup_name"] %>
+  inspection_ws
+windows:
+  - roscore:
+      layout: tiled
+      panes:
+        - roscore
+        - waitForRos; roslaunch uav_ros_general apm2.launch fcu_url:=$PIX_SYM
+        - waitForRos; waitForMavros; sleep 10; rosrun mavros mavsys -n $UAV_NAMESPACE/mavros rate --all 50
+  - odometry:
+      layout: tiled
+      panes:
+        - |
+          waitForRos;
+          if [ "$SENSOR" = "t265" ]; then
+            roslaunch realsense2_camera rs_t265.launch \
+            camera:=$CAMERA_LINK enable_fisheye1:=true enable_fisheye2:=true
+          elif [ "$SENSOR" = "optitrack" ]; then
+            roslaunch uav_ros_general optitrack.launch object_name:=$OBJECT_NAME ip:=$OPTITRACK_IP
+          fi
+  - control:
+      layout: tiled
+      panes:
+        - waitForRos; roslaunch uav_ros_general rc_to_joy.launch
+          mapping_file:=$RC_MAPPING
+        - waitForRos; roslaunch uav_ros_control pid_carrot.launch 
+          manual_takeoff:=true 
+          odometry:=$ODOM_TOPIC
+          msf_callback_enable:=true
+          default_params:=$CONTROL_PARAMS
+          control_type:=$CONTROL_TYPE
+        - waitForRos; roslaunch impedance_control impedance_control.launch
+          namespace:=$UAV_NAMESPACE
+          odometry:=$ODOM_TOPIC
+          traj_in:=position_hold/trajectory_out
+          traj_out:=position_hold/trajectory
+  - trajectory:
+      layout: tiled
+      panes:
+        - waitForRos; roslaunch uav_ros_tracker topp_tracker.launch 
+          tracker_config:=custom_config/topp_config_custom.yaml
+          output_point:=position_hold/trajectory_out
+  - bag:
+      layout: tiled
+      panes:
+        - history -s "rosbag record -a -o $HOME/bags/new_tukan_tilt_test"
+        - |
+          waitForRos
+          rostopic pub --latch /$UAV_NAMESPACE/impedance_control/force_torque_meas_input geometry_msgs/WrenchStamped "header:
+            seq: 0
+            stamp:
+              secs: 0
+              nsecs: 0
+            frame_id: ''
+          wrench:
+            force:
+              x: 0.0
+              y: 0.0
+              z: 0.0
+            torque:
+              x: 0.0
+              y: 0.0
+              z: 0.0" 
+
+  - bag:
+      layout: tiled
+      panes:
+        - history -s "rosservice call /red/position_hold"
