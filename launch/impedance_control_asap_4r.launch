@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+
+<launch>
+
+  <arg name="use_sim_time" default="true"/>
+
+  <arg name="namespace" default="uav" />
+  <arg name="x" default="0.0" />
+  <arg name="y" default="0.0" />
+  <arg name="z" default="1.0" />
+
+  <arg name="aerial_manipulator_control_rate" default="100"/>
+  <arg name="aerial_manipulator_control_params_file" default="/config/aerial_manipulator_parameters_asap_4r.yaml"/>
+
+  <node name="sor_pgs_w" pkg="dynamic_reconfigure" type="dynparam" args="set gazebo sor_pgs_w 1.0"/>
+
+  <group ns="$(arg namespace)">
+    <node name="aerial_manipulator_control" pkg="aerial_manipulators_control" type="aerial_manipulator_control" output="screen">
+      <remap from="aerial_manipulator_control/force_torque_meas_input" to="force_sensor/force_torque_output" />
+      <remap from="aerial_manipulator_control/uav/odometry_meas_input" to="odometry" />
+      <remap from="aerial_manipulator_control/uav/pose_ref_output" to="pose_ref" />
+      <remap from="joint_trajectory" to="arm_joint_trajectory" />
+
+      <param name="rate" value="$(arg aerial_manipulator_control_rate)"/>
+      <param name="parameters_file" value="$(arg aerial_manipulator_control_params_file)"/>
+      <param name="simulation" value="$(arg use_sim_time)"/>
+      <param name="maniupulator_name" value="asap_manipulator_4r"/>
+      <param name="joint_group_name" value="asap_manipulator_4r_arm"/>
+    </node>
+
+    <node name="force_filter_node" pkg="impedance_control" type="force_filter_node">
+      <param name="rate" value="1000"/>
+      <param name="moving_average_sample_number" value="10"/>
+      <param name="median_filter_size" value="21"/>
+      <param name="pt1_filter_time_constant" value="0.05"/>
+      <param name="invert_force_measurements" value="true"/>
+      <remap from="force_sensor/force_torque_local_input" to="asap_manipulator_4r/force_sensor/ft_sensor" />
+      <remap from="force_sensor/transformation_matrix_input" to="aerial_manipulator_control/transformation/world_end_effector" />
+    </node>
+
+    <!-- Load parameters -->
+    <!-- rosparam command="load" file="$(find plane_detection_ros)/config/detection/detection_parameters_wall.yaml" /-->
+
+    <!-- Launch plane detection -->
+    <!--node
+            pkg="plane_detection_ros"
+            type="plane_detection_node"
+            name="plane_detection_node"
+            output="screen">
+            <remap from="/pointcloud" to="velodyne_points"/>
+            <remap from="odometry" to="odometry"/>
+    </node-->
+  </group>
+
+</launch>
