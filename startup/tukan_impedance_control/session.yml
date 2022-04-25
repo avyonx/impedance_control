@@ -44,6 +44,11 @@ windows:
         - waitForRos; roslaunch uav_ros_tracker topp_tracker.launch 
           tracker_config:=custom_config/topp_config_custom.yaml
           output_point:=position_hold/trajectory_out
+  - force:
+      layout: tiled
+      panes:
+        - waitForRos; roslaunch optoforce_sensor omd-20-se-60n.launch
+        - waitForRos; roslaunch impedance_control force_filter.launch
   - bag:
       layout: tiled
       panes:
@@ -66,7 +71,3 @@ windows:
               y: 0.0
               z: 0.0" 
 
-  - bag:
-      layout: tiled
-      panes:
-        - history -s "rosservice call /red/position_hold"

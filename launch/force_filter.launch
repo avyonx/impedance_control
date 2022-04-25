@@ -1,0 +1,16 @@
+<launch>
+<node name="force_filter_node" pkg="impedance_control" type="force_filter_node">
+      <param name="rate" value="1000"/>
+      <param name="moving_average_sample_number" value="10"/>
+      <param name="median_filter_size" value="21"/>
+      <param name="pt1_filter_time_constant" value="0.05"/>
+      <param name="invert_force_measurements" value="true"/>
+      <param name="force_pitch_transform"     value="0.0"/>
+      <param name="force_roll_transform"      value="-1.57"/>
+      <param name="force_yaw_transform"       value="-1.57"/>
+      <remap from="force_sensor/force_torque_global_input" to="/optoforce_node/OptoForceWrench" />
+      <remap from="force_sensor/transformation_matrix_input" to="aerial_manipulator_control/transformation/world_end_effector" />
+      <remap from="/force_sensor/force_torque_output" to="/red/impedance_control/force_torque_meas_input"/>
+    </node>
+</launch>
+
