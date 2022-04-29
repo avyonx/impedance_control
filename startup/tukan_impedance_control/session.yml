@@ -53,21 +53,4 @@ windows:
       layout: tiled
       panes:
         - history -s "rosbag record -a -o $HOME/bags/new_tukan_tilt_test"
-        - |
-          waitForRos
-          rostopic pub --latch /$UAV_NAMESPACE/impedance_control/force_torque_meas_input geometry_msgs/WrenchStamped "header:
-            seq: 0
-            stamp:
-              secs: 0
-              nsecs: 0
-            frame_id: ''
-          wrench:
-            force:
-              x: 0.0
-              y: 0.0
-              z: 0.0
-            torque:
-              x: 0.0
-              y: 0.0
-              z: 0.0" 
-
+        - waitForRos; sleep 20; rosservice call /force_filter/zero_all; exit

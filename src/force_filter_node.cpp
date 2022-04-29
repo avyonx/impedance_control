@@ -343,6 +343,9 @@ int main(int argc, char **argv)
     private_node_handle_.param("force_pitch_transform", t_pitch, float(0.0));
     private_node_handle_.param("force_yaw_transform", t_yaw, float(0.0));
 
+    ROS_INFO("Force pitch transform %.2f", t_pitch);
+    ROS_INFO("Force roll transform %.2f", t_roll);
+    ROS_INFO("Force yaw transform %.2f", t_yaw);
     ForceFilter filters(rate, invert_meas);
 
     filters.set_transform(t_roll, t_pitch, t_yaw);
