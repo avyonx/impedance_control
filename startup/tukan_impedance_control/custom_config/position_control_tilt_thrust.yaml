@@ -3,8 +3,8 @@ control:
   rate: 50
   hover: 0.26
   
-  pitch_tilt_channel: 5
-  roll_tilt_channel: 6
+  pitch_tilt_channel: 8
+  roll_tilt_channel: 9
 
   default_pwm_pitch: 1500
   default_pwm_roll: 1500
