@@ -13,7 +13,7 @@ rm .tmuxinator.yml
 ln session.yml .tmuxinator.yml
 
 SETUP_NAME=$1
-[ -z "$SETUP_NAME" ] && SETUP_NAME=optitrack_setup.sh
+[ -z "$SETUP_NAME" ] && SETUP_NAME=tilt_control_optitrack_setup.sh
 
 # start tmuxinator
 tmuxinator uav_ros_indoor setup_name=$SETUP_NAME
