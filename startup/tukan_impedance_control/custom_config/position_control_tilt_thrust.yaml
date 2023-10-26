@@ -7,7 +7,7 @@ control:
   roll_tilt_channel: 9
 
   default_pwm_pitch: 1500
-  default_pwm_roll: 1500
+  default_pwm_roll: 1528
 
   ff_gain:
     velocity:
