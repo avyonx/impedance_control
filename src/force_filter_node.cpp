@@ -9,6 +9,10 @@
 #include <std_msgs/Float64MultiArray.h>
 #include <std_srvs/Empty.h>
 
+#include <nav_msgs/Odometry.h>
+
+#include <tf2/LinearMath/Matrix3x3.h>
+
 class ForceFilter {
 private:
     bool force_start_flag_, force_filters_initialized_, invert_;
@@ -30,6 +34,9 @@ private:
     Tf1 force_z_pt1_filt, force_x_pt1_filt, force_y_pt1_filt;
 
     Eigen::Matrix4d T_LG_, Ti_, T_force_sensor_;
+
+    nav_msgs::Odometry curr_odom_;
+
 public:
     ForceFilter(int rate, bool invert):
         rate_(rate),
@@ -156,6 +163,26 @@ public:
         euler[2] = yaw;
 
         getRotationTranslationMatrix(T_force_sensor_, euler);
+    }
+
+    void odomCb(const nav_msgs::Odometry& odom) {
+       
+      tf2::Matrix3x3 m(tf2::Quaternion(
+            odom.pose.pose.orientation.x,
+            odom.pose.pose.orientation.y,
+            odom.pose.pose.orientation.z,
+            odom.pose.pose.orientation.w));
+
+      //T_LG_ << msg.data[0],  msg.data[1],  msg.data[2],  0.0,
+      //         msg.data[4],  msg.data[5],  msg.data[6],  0.0,
+      //         msg.data[8],  msg.data[9],  msg.data[10], 0.0,
+      //         msg.data[12], msg.data[13], msg.data[14], msg.data[15];
+
+      
+      T_LG_ << m[0][0], m[0][1], m[0][2], 0.0, 
+               m[1][0], m[1][1], m[1][2], 0.0,
+               m[2][0], m[2][1], m[2][2], 0.0,
+               0,       0,       0,       1.0;
     }
 
     void forceMeasurementGlobalCb(const geometry_msgs::WrenchStamped &msg)
@@ -353,6 +380,7 @@ int main(int argc, char **argv)
     ros::Subscriber force_local_ros_sub = n.subscribe("force_sensor/force_torque_local_input", 1, &ForceFilter::forceMeasurementLocalCb, &filters);
     ros::Subscriber force_global_ros_sub = n.subscribe("force_sensor/force_torque_global_input", 1, &ForceFilter::forceMeasurementGlobalCb, &filters);
     ros::Subscriber transformation_matrix_ros_sub = n.subscribe("force_sensor/transformation_matrix_input", 1, &ForceFilter::transformationMatrixCb, &filters);
+    ros::Subscriber odom_sub = n.subscribe("odom", 1, &ForceFilter::odomCb, &filters);
     
     ros::Publisher force_filtered_pub_ = n.advertise<geometry_msgs::WrenchStamped>("force_sensor/force_torque_output", 1);
     
