@@ -11,6 +11,7 @@
       <remap from="force_sensor/force_torque_local_input" to="/optoforce_node/OptoForceWrench" />
       <remap from="force_sensor/transformation_matrix_input" to="aerial_manipulator_control/transformation/world_end_effector" />
       <remap from="force_sensor/force_torque_output" to="/red/impedance_control/force_torque_meas_input"/>
+      <remap from="odom" to="/tukan/vrpn_client/estimated_transform"/>
     </node>
 </launch>
 
