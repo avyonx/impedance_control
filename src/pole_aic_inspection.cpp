@@ -3,6 +3,9 @@
 #include <geometry_msgs/WrenchStamped.h> // For ft_sensor data
 #include <nav_msgs/Odometry.h> // For odometry data
 
+#include <impedance_control/impedance_control.h>
+#include <impedance_control/aic.h>
+
 class PoleAICInspection {
 public:
     PoleAICInspection(ros::NodeHandle& nh, ros::NodeHandle& nh_private) {
@@ -11,7 +14,7 @@ public:
 
         // Subscribe to necessary topics
         trajectory_sub_ = nh.subscribe("position_hold/trajectory", 1, &PoleAICInspection::trajectoryCallback, this);
-        ft_sensor_sub_ = nh.subscribe("ft_sensor_topic", 1, &PoleAICInspection::ftSensorCallback, this);
+        ft_sensor_sub_ = nh.subscribe("force_sensor/sensor_readings", 1, &PoleAICInspection::ftSensorCallback, this);
         odometry_sub_ = nh.subscribe("odometry", 1, &PoleAICInspection::odometryCallback, this);
     }
 

@@ -64,17 +64,17 @@ target_link_libraries(aic ${catkin_LIBRARIES} Tf1 Tf2 function)
 add_executable(impedance_control_node src/impedance_control_node.cpp)
 target_link_libraries(impedance_control_node ${catkin_LIBRARIES} yaml-cpp impedance_control aic)
 
-#
+# Add main control for aic and trajectory mofication
 add_executable(pole_aic_inspection src/pole_aic_inspection.cpp)
-target_link_libraries(pole_aic_inspection ${catkin_LIBRARIES} yaml-cpp)
+target_link_libraries(pole_aic_inspection ${catkin_LIBRARIES} yaml-cpp Tf2 impedance_control aic Tf1 median_filter)
 
 # Add the new force_reference_node executable
 add_executable(force_reference_node src/force_reference_node.cpp)
 target_link_libraries(force_reference_node ${catkin_LIBRARIES})
-#
 
-add_executable(force_filter_node src/force_filter_node.cpp)
-target_link_libraries(force_filter_node ${catkin_LIBRARIES} Tf2 median_filter Tf1)
+# Add transformation from sensor frame to drone frame
+add_executable(sensor2drone_node src/sensor2drone_tf.cpp)
+target_link_libraries(sensor2drone_node ${catkin_LIBRARIES} yaml-cpp)
 
 add_executable(wall_planner_node src/asap_wall_planner.cpp)
 target_link_libraries(wall_planner_node ${catkin_LIBRARIES})

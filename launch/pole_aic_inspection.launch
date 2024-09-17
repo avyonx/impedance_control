@@ -13,4 +13,7 @@
     <param name="force_y" value="0.0" />
     <param name="force_z" value="0.0" />
   </node>
+
+   <!-- Force-Trque sensor transformation publishe -->
+  <node pkg="impedance_control" type="sensor2drone_node" name="sensor2drone_node" output="screen" ns="$(arg name)"/>
 </launch>

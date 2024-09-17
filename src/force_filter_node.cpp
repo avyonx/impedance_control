@@ -13,12 +13,14 @@
 
 #include <tf2/LinearMath/Matrix3x3.h>
 
+// Class to handle force and torque filtering
 class ForceFilter {
 private:
+    // Flags and settings
     bool force_start_flag_, force_filters_initialized_, invert_;
-
     int moving_average_sample_number_, rate_;
 
+    // Measurement arrays
     float *force_x_meas_;
     float *force_z_meas_;
     float *force_y_meas_;
@@ -26,18 +28,20 @@ private:
     float *torque_y_meas_;
     float *torque_z_meas_;
 
+    // Offsets for measurements
     float force_z_offset_, force_y_offset_, force_x_offset_, mrac_time_;
     float torque_y_offset_, torque_x_offset_, torque_z_offset_;    
 
+    // Filters
     median_filter force_z_med_filt, force_x_med_filt, force_y_med_filt;
-
     Tf1 force_z_pt1_filt, force_x_pt1_filt, force_y_pt1_filt;
 
+    // Transformation matrices
     Eigen::Matrix4d T_LG_, Ti_, T_force_sensor_;
-
     nav_msgs::Odometry curr_odom_;
 
 public:
+    // Constructor
     ForceFilter(int rate, bool invert):
         rate_(rate),
         force_start_flag_(false),
@@ -46,17 +50,20 @@ public:
         force_x_offset_(0.0),
         force_y_offset_(0.0),
         force_z_offset_(0.0) {
-
+        
+        // Initialize sensor pose (identity matrix)
         T_force_sensor_ <<  1,   0,  0,  0,
                             0,   1,  0,  0,
                             0,   0,  1,  0,
                             0,   0,  0,  1;
-
+        
+        // Initialize drone pose in world (identity matrix)
         T_LG_ << 1,  0,  0,  0,
                  0,  1,  0,  0,
                  0,  0,  1,  0,
                  0,  0,  0,  1;
 
+        // Set transformation matrix based on invert flag
         if (invert_) {
             Ti_ <<  -1,   0,   0,   0,
                      0,  -1,   0,   0,
@@ -71,11 +78,18 @@ public:
         }
     };
 
+    // Destructor
     ~ForceFilter() {
-        delete[] force_z_meas_, force_y_meas_, force_x_meas_;
-        delete[] torque_z_meas_, torque_y_meas_, torque_x_meas_;
+        // Free allocated memory
+        delete[] force_z_meas_;
+        delete[] force_y_meas_;
+        delete[] force_x_meas_;
+        delete[] torque_z_meas_;
+        delete[] torque_y_meas_;
+        delete[] torque_x_meas_;
     };
 
+    // Initialize filters
     void initForceFilters(int moving_average_sample_number, int median_filter_size, float pt1_t)
     {
         int i;
@@ -83,6 +97,7 @@ public:
 
         moving_average_sample_number_ = moving_average_sample_number;
 
+         // Allocate memory for measurement arrays
         force_z_meas_ = new float[moving_average_sample_number];
         force_x_meas_ = new float[moving_average_sample_number];
         force_y_meas_ = new float[moving_average_sample_number];
@@ -90,10 +105,12 @@ public:
         torque_y_meas_ = new float[moving_average_sample_number];
         torque_z_meas_ = new float[moving_average_sample_number];
 
+        // Initialize median filters
         force_z_med_filt.init(median_filter_size);
         force_x_med_filt.init(median_filter_size);
         force_y_med_filt.init(median_filter_size);
 
+        // Initialize PT1 filters
         force_z_pt1_filt.reset();
         force_z_pt1_filt.setNumerator(1.0, 0.0);
         force_z_pt1_filt.setDenominator(1, pt1_t);
@@ -109,6 +126,7 @@ public:
         force_y_pt1_filt.setDenominator(1, pt1_t);
         force_y_pt1_filt.c2d(1.0/rate_, "zoh");
 
+        // Initialize measurement arrays to zero
         for (i = 0; i < moving_average_sample_number; i++)
         {
             force_z_meas_[i] = 0;
@@ -120,6 +138,7 @@ public:
         }
     };
 
+    // Generate rotation-translation matrix from Euler angles
     void getRotationTranslationMatrix(Eigen::Matrix4d &rotationTranslationMatrix, float *orientationEuler) {
         float r11, r12, r13, r21, r22, r23;
         float r31, r32, r33;
@@ -129,7 +148,8 @@ public:
         x = orientationEuler[0];
         y = orientationEuler[1];
         z = orientationEuler[2];
-
+        
+        // Calculate rotation matrix elements
         r11 = cos(y)*cos(z);
 
         r12 = cos(z)*sin(x)*sin(y) - cos(x)*sin(z);
@@ -148,12 +168,14 @@ public:
 
         r33 = cos(x)*cos(y);
 
+        // Form the 4x4 rotation-translation matrix
         rotationTranslationMatrix << r11, r12, r13, 0.0,
                                      r21, r22, r23, 0.0,
                                      r31, r32, r33, 0.0,
                                      0.0,   0.0,   0.0,   1.0;
     };
 
+    // Set transformation matrix from roll, pitch, and yaw angles
     void set_transform(float roll, float pitch, float yaw)
     {
         float euler[3];
@@ -165,6 +187,7 @@ public:
         getRotationTranslationMatrix(T_force_sensor_, euler);
     }
 
+    // Callback for odometry messages
     void odomCb(const nav_msgs::Odometry& odom) {
        
       tf2::Matrix3x3 m(tf2::Quaternion(
@@ -178,7 +201,7 @@ public:
       //         msg.data[8],  msg.data[9],  msg.data[10], 0.0,
       //         msg.data[12], msg.data[13], msg.data[14], msg.data[15];
 
-      
+      // Update drone pose matrix from odometry data
       T_LG_ << m[0][0], m[0][1], m[0][2], 0.0, 
                m[1][0], m[1][1], m[1][2], 0.0,
                m[2][0], m[2][1], m[2][2], 0.0,
@@ -189,6 +212,7 @@ public:
     {
         if (!force_start_flag_) force_start_flag_ = true;
 
+        // Shift measurements in arrays
         for (int i=0; i<(moving_average_sample_number_-1); i++)
         {
             force_z_meas_[i] = force_z_meas_[i+1];
@@ -199,6 +223,7 @@ public:
             torque_z_meas_[i] = torque_z_meas_[i+1];
         }
 
+        // Apply filters and update measurements
         force_z_meas_[moving_average_sample_number_-1] = force_z_pt1_filt.getDiscreteOutput(force_z_med_filt.filter(msg.wrench.force.z));
         force_x_meas_[moving_average_sample_number_-1] = force_x_pt1_filt.getDiscreteOutput(force_x_med_filt.filter(msg.wrench.force.x));
         force_y_meas_[moving_average_sample_number_-1] = force_y_pt1_filt.getDiscreteOutput(force_y_med_filt.filter(msg.wrench.force.y));
@@ -206,7 +231,8 @@ public:
         torque_y_meas_[moving_average_sample_number_-1] = msg.wrench.torque.y;
         torque_z_meas_[moving_average_sample_number_-1] = msg.wrench.torque.z;
     };
-
+    
+    // Function to get filtered force and torque values
     void forceMeasurementLocalCb(const geometry_msgs::WrenchStamped &msg)
     {
         Eigen::Matrix4d F, Fg;
@@ -214,6 +240,7 @@ public:
 
         if (!force_start_flag_) force_start_flag_ = true;
 
+        // Compute averages
         for (int i=0; i<(moving_average_sample_number_-1); i++)
         {
             force_z_meas_[i] = force_z_meas_[i+1];
@@ -224,6 +251,7 @@ public:
             torque_z_meas_[i] = torque_z_meas_[i+1];
         }
 
+        // format for matrix multiplication
         F << 1,  0,  0,  msg.wrench.force.x,
              0,  1,  0,  msg.wrench.force.y,
              0,  0,  1,  msg.wrench.force.z,
@@ -234,6 +262,7 @@ public:
              0,  0,  1,  msg.wrench.torque.z,
              0,  0,  0,  1;
 
+        // force in world = inverted * pose of drone * pose of sensor on drone * sensor measurement
         Fg = Ti_ * T_LG_ * T_force_sensor_ * F;
         Tg = Ti_ * T_LG_ * T_force_sensor_ * T;
 
