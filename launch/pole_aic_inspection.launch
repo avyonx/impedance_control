@@ -1,0 +1,16 @@
+<launch>
+  <arg name="name" default="$(env UAV_NAMESPACE)" />
+
+  <!-- Pole AIC Inspection Node -->
+  <node pkg="impedance_control" type="pole_aic_inspection" name="pole_aic_inspection" output="screen" ns="$(arg name)">
+    <param name="name" value="$(arg name)" />
+  </node>
+
+  <!-- Force Reference Node -->
+  <node pkg="impedance_control" type="force_reference_node" name="force_reference_node" output="screen" ns="$(arg name)">
+    <!-- Parameters for force reference -->
+    <param name="force_x" value="5.0" />
+    <param name="force_y" value="0.0" />
+    <param name="force_z" value="0.0" />
+  </node>
+</launch>

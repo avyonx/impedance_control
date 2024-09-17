@@ -64,6 +64,15 @@ target_link_libraries(aic ${catkin_LIBRARIES} Tf1 Tf2 function)
 add_executable(impedance_control_node src/impedance_control_node.cpp)
 target_link_libraries(impedance_control_node ${catkin_LIBRARIES} yaml-cpp impedance_control aic)
 
+#
+add_executable(pole_aic_inspection src/pole_aic_inspection.cpp)
+target_link_libraries(pole_aic_inspection ${catkin_LIBRARIES} yaml-cpp)
+
+# Add the new force_reference_node executable
+add_executable(force_reference_node src/force_reference_node.cpp)
+target_link_libraries(force_reference_node ${catkin_LIBRARIES})
+#
+
 add_executable(force_filter_node src/force_filter_node.cpp)
 target_link_libraries(force_filter_node ${catkin_LIBRARIES} Tf2 median_filter Tf1)
 
