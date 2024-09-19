@@ -76,5 +76,9 @@ target_link_libraries(force_reference_node ${catkin_LIBRARIES})
 add_executable(sensor2drone_node src/sensor2drone_tf.cpp)
 target_link_libraries(sensor2drone_node ${catkin_LIBRARIES} yaml-cpp)
 
+# Add filter and output readings in drone frame
+add_executable(force_filter_node src/force_filter_node.cpp)
+target_link_libraries(force_filter_node ${catkin_LIBRARIES} yaml-cpp Tf1 median_filter)
+
 add_executable(wall_planner_node src/asap_wall_planner.cpp)
 target_link_libraries(wall_planner_node ${catkin_LIBRARIES})

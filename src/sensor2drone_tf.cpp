@@ -7,7 +7,7 @@
 #include <geometry_msgs/Pose.h>
 
 int main(int argc, char** argv){
-    ros::init(argc, argv, "sensor2drone_node");
+    ros::init(argc, argv, "force_sensor/sensor2drone_node");
     ros::NodeHandle nh;
 
     // Publisher to publish the 4x4 transformation matrix
@@ -18,7 +18,7 @@ int main(int argc, char** argv){
 
     // Create a request and response for the service call
     gazebo_msgs::GetLinkState get_link_state_srv;
-    get_link_state_srv.request.link_name = "red::pole_tip"; // Modify as per your robot's link names
+    get_link_state_srv.request.link_name = "red::pole_tip"; // Model::link_name
     get_link_state_srv.request.reference_frame = "red::red/base_link"; // Reference frame (previous joint or base link)
 
     // Define a Float64MultiArray for the 4x4 transformation matrix

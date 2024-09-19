@@ -383,7 +383,7 @@ public:
 
 int main(int argc, char **argv)
 {
-    ros::init(argc, argv, "force_filter_node");
+    ros::init(argc, argv, "force_sensor/force_filter_node");
     ros::NodeHandle private_node_handle_("~"), n;
     geometry_msgs::WrenchStamped filtered_ft_sensor_msg;
     int rate, masn, mfs, counter;
@@ -406,12 +406,12 @@ int main(int argc, char **argv)
 
     filters.set_transform(t_roll, t_pitch, t_yaw);
 
-    ros::Subscriber force_local_ros_sub = n.subscribe("force_sensor/force_torque_local_input", 1, &ForceFilter::forceMeasurementLocalCb, &filters);
-    ros::Subscriber force_global_ros_sub = n.subscribe("force_sensor/force_torque_global_input", 1, &ForceFilter::forceMeasurementGlobalCb, &filters);
+    ros::Subscriber force_local_ros_sub = n.subscribe("force_sensor/sensor_readings", 1, &ForceFilter::forceMeasurementLocalCb, &filters);
+    // ros::Subscriber force_global_ros_sub = n.subscribe("force_sensor/force_torque_global_input", 1, &ForceFilter::forceMeasurementGlobalCb, &filters);
     ros::Subscriber transformation_matrix_ros_sub = n.subscribe("force_sensor/transformation_matrix_input", 1, &ForceFilter::transformationMatrixCb, &filters);
-    ros::Subscriber odom_sub = n.subscribe("odom", 1, &ForceFilter::odomCb, &filters);
+    ros::Subscriber odom_sub = n.subscribe("odometry", 1, &ForceFilter::odomCb, &filters);
     
-    ros::Publisher force_filtered_pub_ = n.advertise<geometry_msgs::WrenchStamped>("force_sensor/force_torque_output", 1);
+    ros::Publisher force_filtered_pub_ = n.advertise<geometry_msgs::WrenchStamped>("force_sensor/force_torque_filtered", 1);
     
     ros::ServiceServer zero_all_ros_srv = n.advertiseService("force_filter/zero_all", &ForceFilter::zeroAllCb, &filters);
 

@@ -16,4 +16,6 @@
 
    <!-- Force-Trque sensor transformation publishe -->
   <node pkg="impedance_control" type="sensor2drone_node" name="sensor2drone_node" output="screen" ns="$(arg name)"/>
+
+  <node pkg="impedance_control" type="force_filter_node" name="force_filter_node" output="screen" ns="$(arg name)"/>
 </launch>

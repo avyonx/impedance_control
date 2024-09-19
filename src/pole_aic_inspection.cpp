@@ -14,7 +14,7 @@ public:
 
         // Subscribe to necessary topics
         trajectory_sub_ = nh.subscribe("position_hold/trajectory", 1, &PoleAICInspection::trajectoryCallback, this);
-        ft_sensor_sub_ = nh.subscribe("force_sensor/sensor_readings", 1, &PoleAICInspection::ftSensorCallback, this);
+        ft_sensor_sub_ = nh.subscribe("force_sensor/force_torque_filtered", 1, &PoleAICInspection::ftSensorCallback, this);
         odometry_sub_ = nh.subscribe("odometry", 1, &PoleAICInspection::odometryCallback, this);
     }
 
@@ -38,13 +38,8 @@ private:
         // Store the received trajectory message in the global variable
         last_trajectory_msg_ = *msg;
 
-        // Check if the force in x direction is less than the threshold
-        if (std::abs(last_ft_sensor_msg_.wrench.force.x) < FORCE_THRESHOLD_) {
-            // If the force is smaller than the threshold, publish the trajectory message
-            trajectory_pub_.publish(last_trajectory_msg_); // No modification to trajectory needed
-        } else {
-            // aic correction
-        }
+        trajectory_pub_.publish(last_trajectory_msg_); // No modification to trajectory needed
+        
     }
 
     // Callback to handle the incoming force-torque sensor data
