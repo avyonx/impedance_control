@@ -10,7 +10,7 @@ public:
         force_ref_pub_ = nh_.advertise<geometry_msgs::WrenchStamped>("force_reference", 1000);
 
         // Get the force reference values from parameters or default to zeros
-        nh_private_.param("force_x", force_x_, -5.0);
+        nh_private_.param("force_x", force_x_, 0.0);
         nh_private_.param("force_y", force_y_, 0.0);
         nh_private_.param("force_z", force_z_, 0.0);
         
@@ -37,7 +37,7 @@ public:
             wrench_msg.wrench.torque.z = torque_z_;
 
             // Publish the wrench stamped reference
-            force_ref_pub_.publish(wrench_msg);
+            // force_ref_pub_.publish(wrench_msg);
 
             rate.sleep();
         }

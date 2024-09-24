@@ -8,10 +8,6 @@
 
   <!-- Force Reference Node -->
   <node pkg="impedance_control" type="force_reference_node" name="force_reference_node" output="screen" ns="$(arg name)">
-    <!-- Parameters for force reference -->
-    <param name="force_x" value="5.0" />
-    <param name="force_y" value="0.0" />
-    <param name="force_z" value="0.0" />
   </node>
 
    <!-- Force-Trque sensor transformation publishe -->

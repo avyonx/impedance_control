@@ -9,21 +9,6 @@
   <group ns="$(arg namespace)" >
 
     <node pkg="impedance_control" type="impedance_control_node" name="impedance_control" output="screen">
-      <param name="rate" value="1000"/>
-      <param name="moving_average_sample_number" value="20"/>
-      <param name="median_filter_size" value="21"/>
-      <param name="ImpedanceType" value="1"/>
-      <param name="dead_zone" value="0.5"/>
-      <param name="pt1_filter_time_constant" value="0.05"/>
-      <param name="impedance_control_params_file" value="/config/impedance_control_params.yaml"/>
-      <remap from="impedance_control/pose_command" to="command/pose"/>
-      <param name="capability_group" value="ImpedanceControl"/>
-      <param name="simulation"  value="$(arg simulation)"/>
-
-      <remap from="impedance_control/odometry_meas_input"  to="$(arg odometry)"/>
-      <remap from="impedance_control/trajectory_point_ref_input" to="$(arg traj_in)"/>
-      <remap from="impedance_control/trajectory_point_output" to="$(arg traj_out)"/>
-    </node>
 
   </group>
 

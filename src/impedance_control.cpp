@@ -2,6 +2,9 @@
 #include <math.h>
 #include <memory>
 
+#include <ros/package.h>
+#include "ros/ros.h"
+
 ImpedanceControl::ImpedanceControl(int rate):
     M_(0),
     B_(0),
@@ -121,7 +124,11 @@ void ImpedanceControl::initializeImpedanceFilterTransferFunction(void) {
 }
 
 double* ImpedanceControl::impedanceFilter(double f, double fd, double* Xr) {
+
+    // fd is ref, f is meas
     double e = fd - f;
+
+    ROS_INFO("imed filter FORCE error: %f", e);
 
     Xc_[0] = Ge_[0].getDiscreteOutput(deadZone(e, dead_zone_)) + Gxr_[0].getDiscreteOutput(Xr[0])
             + Gvr_[0].getDiscreteOutput(Xr[1]) + Gar_[0].getDiscreteOutput(Xr[2]);
@@ -131,6 +138,16 @@ double* ImpedanceControl::impedanceFilter(double f, double fd, double* Xr) {
 
     Xc_[2] = Ge_[2].getDiscreteOutput(deadZone(e, dead_zone_)) + Gxr_[2].getDiscreteOutput(Xr[0])
             + Gvr_[2].getDiscreteOutput(Xr[1]) + Gar_[2].getDiscreteOutput(Xr[2]);
+
+    ROS_INFO("+++++++++++++++++++++++++");
+    ROS_INFO("Xr(pose): %f", Xr[0]);
+    ROS_INFO("Xr(vel): %f", Xr[1]);
+    ROS_INFO("Xr(accel): %f", Xr[2]);
+    ROS_INFO("------------------------");
+    ROS_INFO("Xc(pose): %f", Xc_[0]);
+    ROS_INFO("Xc(vel): %f", Xc_[1]);
+    ROS_INFO("Xc(accel): %f", Xc_[2]);
+    ROS_INFO("+++++++++++++++++++++++++");
 
     return Xc_;
 }

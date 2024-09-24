@@ -18,6 +18,9 @@
 #include "yaml-cpp/yaml.h"
 #include <tf2/LinearMath/Quaternion.h>
 
+#include <vector>
+#include <sstream>
+
 
 const auto getYaw = [](double qx, double qy, double qz, double qw)
 {
@@ -67,7 +70,7 @@ private:
 		aic_control_z_.setAdaptiveParameterInitialValues(kp0_[2]);
 	};
 
-	bool simulation_flag_, force_msg_received_, reconfigure_start_;
+	bool simulation_flag_, force_msg_received_, reconfigure_start_, trajectory_msg_received_;
 	bool pose_meas_received_, impedance_start_flag_;
 	double *xr_, *xc_, *yr_, *yc_, *zr_, *zc_, *xKp_, *yKp_, *zKp_;
 	double qxc_[3], qyc_[3], qzc_[3], qwc_[3];
@@ -144,6 +147,13 @@ public:
 			acc_ref_.angular.y = msg.points[0].accelerations[0].angular.y;
 			acc_ref_.angular.z = msg.points[0].accelerations[0].angular.z;
 		}
+		trajectory_msg_received_ = true;
+
+		ROS_INFO("************************");
+    	ROS_INFO("Xe(x): %f", pose_ref_.pose.position.x);
+    	ROS_INFO("Xe(y): %f", pose_ref_.pose.position.y);
+    	ROS_INFO("Xe(z): %f", pose_ref_.pose.position.z);
+    	ROS_INFO("************************");
 	}
 
 	// point of trajectory to be removed, comes from before
@@ -234,6 +244,19 @@ public:
 		}	
 	};
 
+	std::string vectorToString(const std::vector<double>& vec) {
+    std::stringstream ss;
+    ss << "[";
+    for (size_t i = 0; i < vec.size(); ++i) {
+        ss << vec[i];
+        if (i != vec.size() - 1) {
+            ss << ", ";
+        }
+    }
+    ss << "]";
+    return ss.str();
+	}
+
 	// params set, initialize from imports
 	void loadImpedanceControlParameters(std::string file) {
 		YAML::Node config = YAML::LoadFile(file);
@@ -248,6 +271,17 @@ public:
     	wp_ = config["AIC"]["WEIGHTING_FACTORS"]["Wp"].as<std::vector<double> >();
 		wd_ = config["AIC"]["WEIGHTING_FACTORS"]["Wd"].as<std::vector<double> >();
     	
+		ROS_INFO_STREAM("IMPEDANCE_FILTER M: " << vectorToString(M_));
+		ROS_INFO_STREAM("IMPEDANCE_FILTER B: " << vectorToString(B_));
+		ROS_INFO_STREAM("IMPEDANCE_FILTER K: " << vectorToString(K_));
+		ROS_INFO_STREAM("IMPEDANCE_FILTER dead_zone: " << vectorToString(dead_zone_));
+
+		ROS_INFO_STREAM("AIC INTEGRAL_ADAPTATION_GAINS ke1: " << vectorToString(kp1_));
+		ROS_INFO_STREAM("AIC PROPORTIONAL_ADAPTATION_GAINS ke2: " << vectorToString(kp2_));
+		ROS_INFO_STREAM("AIC INITIAL_GAINS Ke: " << vectorToString(kp0_));
+		ROS_INFO_STREAM("AIC WEIGHTING_FACTORS Wp: " << vectorToString(wp_));
+		ROS_INFO_STREAM("AIC WEIGHTING_FACTORS Wd: " << vectorToString(wd_));
+
     	impedance_control_x_.setImpedanceFilterMass(M_[0]);
     	impedance_control_x_.setImpedanceFilterDamping(B_[0]);
     	impedance_control_x_.setImpedanceFilterStiffness(K_[0]);
@@ -278,8 +312,8 @@ public:
 	// flag of measurements
 	bool isReady(void)
 	{
-        ROS_INFO("force_msg_received_: %s", force_msg_received_ ? "true" : "false");
-        ROS_INFO("pose_meas_received_: %s", pose_meas_received_ ? "true" : "false");
+        // ROS_INFO("force_msg_received_: %s", force_msg_received_ ? "true" : "false");
+        // ROS_INFO("pose_meas_received_: %s", pose_meas_received_ ? "true" : "false");
 
 		return force_msg_received_ && pose_meas_received_;
 	};
@@ -290,11 +324,11 @@ public:
 	    bool service_flag = false;
 	    double initial_values[3];
 
-		ROS_INFO("required data is %s", req.data ? "true" : "false");
-        ROS_INFO("isReady %s", isReady() ? "true" : "false");
-		ROS_INFO("impedance_start_flag_ %s", (!impedance_start_flag_) ? "true" : "false");
+		// ROS_INFO("required data is %s", req.data ? "true" : "false");
+        // ROS_INFO("isReady %s", isReady() ? "true" : "false");
+		// ROS_INFO("impedance_start_flag_ %s", (!impedance_start_flag_) ? "true" : "false");
 
-	    if (req.data && isReady() && !impedance_start_flag_)
+	    if (req.data && isReady() && !impedance_start_flag_ && trajectory_msg_received_)
 	    {
 	        initial_values[0] = pose_meas_.pose.position.x;
 	        initial_values[1] = pose_meas_.pose.position.y;
@@ -529,11 +563,11 @@ int main(int argc, char **argv) {
 	// remove -> comes from trajectorys next point
 		//ros::Subscriber pose_ref_ros_sub = n.subscribe("tracker/input_pose", 1, &ImpedanceControlNode::poseRefCb, &impedance_control);
 
-	// Xe -> desired trajectory 
-	ros::Subscriber trajectory_ref_ros_sub = n.subscribe("position_hold/trajectory", 1, &ImpedanceControlNode::trajectoryRefCb, &impedance_control);
+	//  to be removede comes from previous trajectroy
+	// ros::Subscriber trajectory_ref_ros_sub = n.subscribe("position_hold/trajectory", 1, &ImpedanceControlNode::trajectoryRefCb, &impedance_control);
 
-	// to be removede comes from previous trajectroy
-		//ros::Subscriber trajectory_point_ref_ros_sub = n.subscribe("position_hold/trajectory", 1, &ImpedanceControlNode::trajectoryPointRefCb, &impedance_control);
+	// Xe -> desired trajectory
+	ros::Subscriber trajectory_point_ref_ros_sub = n.subscribe("position_hold/trajectory", 1, &ImpedanceControlNode::trajectoryPointRefCb, &impedance_control);
 
 	// sub to force reference 
 	ros::Subscriber force_torque_ref_ros_sub = n.subscribe("force_reference", 1, &ImpedanceControlNode::forceTorqueRefCb, &impedance_control);
@@ -551,7 +585,7 @@ int main(int argc, char **argv) {
 	ros::Publisher trajectory_point_command_pub_ = n.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("position_hold/trajectory_aic_corrected", 1);
 
 	// trajectory Xc already published
-	ros::Publisher pose_commanded_pub_ = n.advertise<geometry_msgs::Pose>("impedance_control/pose_output", 1);
+	// ros::Publisher pose_commanded_pub_ = n.advertise<geometry_msgs::Pose>("impedance_control/pose_output", 1);
 
 	// publish of states, arbitrarry 
 	ros::Publisher state_pub_ = n.advertise<std_msgs::Float64MultiArray>("impedance_control/state", 1);
@@ -607,8 +641,6 @@ int main(int argc, char **argv) {
     	if (impedance_control.startImpedanceControlCb(srv.request, srv.response)) {
     	    if (srv.response.success) {
     	        ROS_INFO("Impedance control started successfully.");
-    	    } else {
-    	        ROS_WARN("Failed to start impedance control.");
     	    }
     	} else {
     	    ROS_ERROR("Failed to call the function.");
@@ -644,16 +676,16 @@ int main(int argc, char **argv) {
                 zq = impedance_control.getZq();
 
 				// calculate next pose to mitigate error -> can be removed
-        		commanded_position_msg.header.stamp = impedance_control.getTime();
-                commanded_position_msg.pose.position.x = xc[0];
-                commanded_position_msg.pose.position.y = yc[0];
-                commanded_position_msg.pose.position.z = zc[0];
-                commanded_position_msg.pose.orientation.x = qxc[0];
-                commanded_position_msg.pose.orientation.y = qyc[0];
-                commanded_position_msg.pose.orientation.z = qzc[0];
-                commanded_position_msg.pose.orientation.w = qwc[0];
-                pose_stamped_commanded_pub_.publish(commanded_position_msg);
-                pose_commanded_pub_.publish(commanded_position_msg.pose);
+        		// commanded_position_msg.header.stamp = impedance_control.getTime();
+                // commanded_position_msg.pose.position.x = xc[0];
+                // commanded_position_msg.pose.position.y = yc[0];
+                // commanded_position_msg.pose.position.z = zc[0];
+                // commanded_position_msg.pose.orientation.x = qxc[0];
+                // commanded_position_msg.pose.orientation.y = qyc[0];
+                // commanded_position_msg.pose.orientation.z = qzc[0];
+                // commanded_position_msg.pose.orientation.w = qwc[0];
+                // pose_stamped_commanded_pub_.publish(commanded_position_msg);
+                // pose_commanded_pub_.publish(commanded_position_msg.pose);
 
 				// Xc of interest
 				commanded_traj_point.transforms[0].translation.x = xc[0];
