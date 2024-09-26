@@ -13,6 +13,7 @@
 #include <geometry_msgs/Twist.h>
 #include <std_srvs/SetBool.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/String.h>
 #include <impedance_control/ImpedanceControlConfig.h>
 
 #include "yaml-cpp/yaml.h"
@@ -71,7 +72,7 @@ private:
 	};
 
 	bool simulation_flag_, force_msg_received_, reconfigure_start_, trajectory_msg_received_;
-	bool pose_meas_received_, impedance_start_flag_;
+	bool pose_meas_received_, impedance_start_flag_, carrot_in_hold_mode_;
 	double *xr_, *xc_, *yr_, *yc_, *zr_, *zc_, *xKp_, *yKp_, *zKp_;
 	double qxc_[3], qyc_[3], qzc_[3], qwc_[3];
 	double xq_, yq_, zq_;
@@ -94,6 +95,7 @@ public:
 		force_msg_received_(false),
 		pose_meas_received_(false),
 		impedance_start_flag_(false),
+		carrot_in_hold_mode_(false),
 		impedance_control_x_(rate),
 		impedance_control_y_(rate),
 		impedance_control_z_(rate),
@@ -118,6 +120,17 @@ public:
 	    pose_ref_ = msg;
 	    vel_ref_ = geometry_msgs::Twist();
 	    acc_ref_ = geometry_msgs::Twist();
+	};
+
+	//subscriber for status of carrot
+	void carrotStatusCb(const std_msgs::String &msg) {
+		if (msg.data == "HOLD") {
+			carrot_in_hold_mode_ = true;
+			ROS_INFO("Carrot is in HOLD mode.");
+		} else {
+			carrot_in_hold_mode_ = false;
+			ROS_INFO("Carrot is NOT in HOLD mode.");
+		}
 	};
 
 	// main sub to trajectory
@@ -149,11 +162,11 @@ public:
 		}
 		trajectory_msg_received_ = true;
 
-		ROS_INFO("************************");
-    	ROS_INFO("Xe(x): %f", pose_ref_.pose.position.x);
-    	ROS_INFO("Xe(y): %f", pose_ref_.pose.position.y);
-    	ROS_INFO("Xe(z): %f", pose_ref_.pose.position.z);
-    	ROS_INFO("************************");
+		// ROS_INFO("************************");
+    	// ROS_INFO("Xe(x): %f", pose_ref_.pose.position.x);
+    	// ROS_INFO("Xe(y): %f", pose_ref_.pose.position.y);
+    	// ROS_INFO("Xe(z): %f", pose_ref_.pose.position.z);
+    	// ROS_INFO("************************");
 	}
 
 	// point of trajectory to be removed, comes from before
@@ -198,7 +211,6 @@ public:
 		pose_meas_received_ = true;
 		pose_meas_ = msg;
 	};
-
 
 	// adaptation of aic params
 	void reconfigureCb(impedance_control::ImpedanceControlConfig &config, uint32_t level) {
@@ -328,7 +340,7 @@ public:
         // ROS_INFO("isReady %s", isReady() ? "true" : "false");
 		// ROS_INFO("impedance_start_flag_ %s", (!impedance_start_flag_) ? "true" : "false");
 
-	    if (req.data && isReady() && !impedance_start_flag_ && trajectory_msg_received_)
+	    if (req.data && isReady() && !impedance_start_flag_ && trajectory_msg_received_ && carrot_in_hold_mode_)
 	    {
 	        initial_values[0] = pose_meas_.pose.position.x;
 	        initial_values[1] = pose_meas_.pose.position.y;
@@ -559,6 +571,9 @@ int main(int argc, char **argv) {
 
 	// force measurements for feedback
 	ros::Subscriber force_ros_sub = n.subscribe("force_sensor/force_torque_filtered", 1, &ImpedanceControlNode::forceMeasurementCb, &impedance_control);
+ 
+	//subscribe to state in order to trigger after takeoff
+	ros::Subscriber carrot_State = n.subscribe("carrot/status", 1, &ImpedanceControlNode::carrotStatusCb, &impedance_control);
 
 	// remove -> comes from trajectorys next point
 		//ros::Subscriber pose_ref_ros_sub = n.subscribe("tracker/input_pose", 1, &ImpedanceControlNode::poseRefCb, &impedance_control);
@@ -592,6 +607,7 @@ int main(int argc, char **argv) {
 
 	// starting flag to be published
 	ros::ServiceServer start_impedance_control_ros_srv = n.advertiseService("impedance_control/start", &ImpedanceControlNode::startImpedanceControlCb, &impedance_control);
+	
 	// Create a service client for the SetBool service
 	ros::ServiceClient client = n.serviceClient<std_srvs::SetBool>("impedance_control/start");
 

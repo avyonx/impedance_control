@@ -1,6 +1,9 @@
 #include <impedance_control/aic.h>
 #include <math.h>
 
+#include <ros/package.h>
+#include "ros/ros.h"
+
 aic::aic(int rate):
 	sampling_time_(1.0),
 	wp_(1.0),
@@ -86,7 +89,11 @@ void aic::setDeadZone(double dead_zone) {
 }
 
 double* aic::compute(double f, double fd, double* Xd) {
+
+	// fd is ref (desired), f is meas
 	double e = fd - f;
+
+	// ROS_INFO("aic FORCE error: %f", fd);
 	e_.addValue(e);
 
 	if (fd != 0.0)
@@ -98,6 +105,16 @@ double* aic::compute(double f, double fd, double* Xd) {
 	xr_[0] = Xd[0] + kp_[0] * fd;
 	xr_[1] = Xd[1] + kp_[1] * fd;
 	xr_[2] = Xd[2] + kp_[2] * fd;
+
+	// ROS_INFO("+++++++++++++++++++++++++");
+    // ROS_INFO("Xd(x): %f", Xd[0]);
+    // ROS_INFO("Xd(y): %f", Xd[1]);
+    // ROS_INFO("Xd(z): %f", Xd[2]);
+    // ROS_INFO("------------------------");
+    // ROS_INFO("Xr(x): %f", xr_[0]);
+    // ROS_INFO("Xr(y): %f", xr_[1]);
+    // ROS_INFO("Xr(z): %f", xr_[2]);
+    // ROS_INFO("+++++++++++++++++++++++++");
 
 	return xr_;
 }
@@ -124,4 +141,3 @@ double aic::deadZone(double data, double limit) {
 
 	return temp;
 }
-
