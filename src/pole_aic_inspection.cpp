@@ -93,6 +93,7 @@ public:
 		rate_(rate),
 		simulation_flag_(simulation),
 		force_msg_received_(false),
+		trajectory_msg_received_(false),
 		pose_meas_received_(false),
 		impedance_start_flag_(false),
 		carrot_in_hold_mode_(false),
@@ -126,48 +127,50 @@ public:
 	void carrotStatusCb(const std_msgs::String &msg) {
 		if (msg.data == "HOLD") {
 			carrot_in_hold_mode_ = true;
-			ROS_INFO("Carrot is in HOLD mode.");
+			// ROS_INFO("Carrot is in HOLD mode.");
 		} else {
 			carrot_in_hold_mode_ = false;
-			ROS_INFO("Carrot is NOT in HOLD mode.");
+			// ROS_INFO("Carrot is NOT in HOLD mode.");
 		}
 	};
 
 	// main sub to trajectory
-	void trajectoryRefCb(const trajectory_msgs::MultiDOFJointTrajectory &msg) {
-		if (msg.points.size() > 0)
-		{
-			pose_ref_.header = msg.header;
-			pose_ref_.pose.position.x = msg.points[0].transforms[0].translation.x;
-			pose_ref_.pose.position.y = msg.points[0].transforms[0].translation.y;
-			pose_ref_.pose.position.z = msg.points[0].transforms[0].translation.z;
-			pose_ref_.pose.orientation.x = msg.points[0].transforms[0].rotation.x;
-			pose_ref_.pose.orientation.y = msg.points[0].transforms[0].rotation.y;
-			pose_ref_.pose.orientation.z = msg.points[0].transforms[0].rotation.z;
-			pose_ref_.pose.orientation.w = msg.points[0].transforms[0].rotation.w;
+	 void trajectoryRefCb(const trajectory_msgs::MultiDOFJointTrajectory &msg) {
+	 	if (msg.points.size() > 0)
+	 	{
+	 		pose_ref_.header = msg.header;
+	 		pose_ref_.pose.position.x = msg.points[0].transforms[0].translation.x;
+	 		pose_ref_.pose.position.y = msg.points[0].transforms[0].translation.y;
+	 		pose_ref_.pose.position.z = msg.points[0].transforms[0].translation.z;
+	 		pose_ref_.pose.orientation.x = msg.points[0].transforms[0].rotation.x;
+	 		pose_ref_.pose.orientation.y = msg.points[0].transforms[0].rotation.y;
+	 		pose_ref_.pose.orientation.z = msg.points[0].transforms[0].rotation.z;
+	 		pose_ref_.pose.orientation.w = msg.points[0].transforms[0].rotation.w;
 
-			vel_ref_.linear.x = msg.points[0].velocities[0].linear.x;
-			vel_ref_.linear.y = msg.points[0].velocities[0].linear.y;
-			vel_ref_.linear.z = msg.points[0].velocities[0].linear.z;
-			vel_ref_.angular.x = msg.points[0].velocities[0].angular.x;
-			vel_ref_.angular.y = msg.points[0].velocities[0].angular.y;
-			vel_ref_.angular.z = msg.points[0].velocities[0].angular.z;
+	 		vel_ref_.linear.x = msg.points[0].velocities[0].linear.x;
+	 		vel_ref_.linear.y = msg.points[0].velocities[0].linear.y;
+	 		vel_ref_.linear.z = msg.points[0].velocities[0].linear.z;
+	 		vel_ref_.angular.x = msg.points[0].velocities[0].angular.x;
+	 		vel_ref_.angular.y = msg.points[0].velocities[0].angular.y;
+	 		vel_ref_.angular.z = msg.points[0].velocities[0].angular.z;
 
-			acc_ref_.linear.x = msg.points[0].accelerations[0].linear.x;
-			acc_ref_.linear.y = msg.points[0].accelerations[0].linear.y;
-			acc_ref_.linear.z = msg.points[0].accelerations[0].linear.z;
-			acc_ref_.angular.x = msg.points[0].accelerations[0].angular.x;
-			acc_ref_.angular.y = msg.points[0].accelerations[0].angular.y;
-			acc_ref_.angular.z = msg.points[0].accelerations[0].angular.z;
-		}
-		trajectory_msg_received_ = true;
+	 		acc_ref_.linear.x = msg.points[0].accelerations[0].linear.x;
+	 		acc_ref_.linear.y = msg.points[0].accelerations[0].linear.y;
+	 		acc_ref_.linear.z = msg.points[0].accelerations[0].linear.z;
+	 		acc_ref_.angular.x = msg.points[0].accelerations[0].angular.x;
+	 		acc_ref_.angular.y = msg.points[0].accelerations[0].angular.y;
+	 		acc_ref_.angular.z = msg.points[0].accelerations[0].angular.z;
+	 		
+	 	} 
+	 	
+	 	trajectory_msg_received_ = true;		
 
-		// ROS_INFO("************************");
-    	// ROS_INFO("Xe(x): %f", pose_ref_.pose.position.x);
-    	// ROS_INFO("Xe(y): %f", pose_ref_.pose.position.y);
-    	// ROS_INFO("Xe(z): %f", pose_ref_.pose.position.z);
-    	// ROS_INFO("************************");
-	}
+	 	// ROS_INFO("************************");
+     	// ROS_INFO("Xe(x): %f", pose_ref_.pose.position.x);
+     	// ROS_INFO("Xe(y): %f", pose_ref_.pose.position.y);
+     	// ROS_INFO("Xe(z): %f", pose_ref_.pose.position.z);
+     	// ROS_INFO("************************");
+	 }
 
 	// point of trajectory to be removed, comes from before
 	void trajectoryPointRefCb(const trajectory_msgs::MultiDOFJointTrajectoryPoint &msg) {
@@ -179,19 +182,22 @@ public:
 		pose_ref_.pose.orientation.z = msg.transforms[0].rotation.z;
 		pose_ref_.pose.orientation.w = msg.transforms[0].rotation.w;
 
-		vel_ref_.linear.x = msg.velocities[0].linear.x;
-		vel_ref_.linear.y = msg.velocities[0].linear.y;
-		vel_ref_.linear.z = msg.velocities[0].linear.z;
-		vel_ref_.angular.x = msg.velocities[0].angular.x;
-		vel_ref_.angular.y = msg.velocities[0].angular.y;
-		vel_ref_.angular.z = msg.velocities[0].angular.z;
+		vel_ref_.linear.x = 0*msg.velocities[0].linear.x;
+		vel_ref_.linear.y = 0*msg.velocities[0].linear.y;
+		vel_ref_.linear.z = 0*msg.velocities[0].linear.z;
+		vel_ref_.angular.x =0* msg.velocities[0].angular.x;
+		vel_ref_.angular.y =0* msg.velocities[0].angular.y;
+		vel_ref_.angular.z =0* msg.velocities[0].angular.z;
 
-		acc_ref_.linear.x = msg.accelerations[0].linear.x;
-		acc_ref_.linear.y = msg.accelerations[0].linear.y;
-		acc_ref_.linear.z = msg.accelerations[0].linear.z;
-		acc_ref_.angular.x = msg.accelerations[0].angular.x;
-		acc_ref_.angular.y = msg.accelerations[0].angular.y;
-		acc_ref_.angular.z = msg.accelerations[0].angular.z;
+		acc_ref_.linear.x = 0*msg.accelerations[0].linear.x;
+		acc_ref_.linear.y = 0*msg.accelerations[0].linear.y;
+		acc_ref_.linear.z = 0*msg.accelerations[0].linear.z;
+		acc_ref_.angular.x =0* msg.accelerations[0].angular.x;
+		acc_ref_.angular.y =0* msg.accelerations[0].angular.y;
+		acc_ref_.angular.z =0* msg.accelerations[0].angular.z;
+
+		trajectory_msg_received_ = true;
+
 	}
 
 	// sub to force reference
@@ -338,7 +344,7 @@ public:
 
 		// ROS_INFO("required data is %s", req.data ? "true" : "false");
         // ROS_INFO("isReady %s", isReady() ? "true" : "false");
-		// ROS_INFO("impedance_start_flag_ %s", (!impedance_start_flag_) ? "true" : "false");
+		ROS_INFO("trajectory is recived: %s", (trajectory_msg_received_ ) ? "true" : "false");
 
 	    if (req.data && isReady() && !impedance_start_flag_ && trajectory_msg_received_ && carrot_in_hold_mode_)
 	    {
@@ -445,21 +451,24 @@ public:
 		qwc_[1] = 0.0;
 		qwc_[2] = 0.0;
 
-
+		// xd = Xe in diagram
 		xr_ = aic_control_x_.compute(force_meas_.wrench.force.x, force_torque_ref_.wrench.force.x, xd);
         xKp_ = aic_control_x_.getAdaptiveEnvironmentStiffnessGainKp();
+		// xr_ = Xr in diagram -> output of adaptive impedance to impedance filter
         xq_ = aic_control_x_.getQ();
-        xc_ = impedance_control_x_.impedanceFilter(force_meas_.wrench.force.x, force_torque_ref_.wrench.force.x, xr_);
+
+		// inirial Xe (Xd) from MPC is passde to filter and it is creating new corrected trajectory without adaptation
+        xc_ = impedance_control_x_.impedanceFilter(force_meas_.wrench.force.x, force_torque_ref_.wrench.force.x, xd);
 
         yr_ = aic_control_y_.compute(force_meas_.wrench.force.y, force_torque_ref_.wrench.force.y, yd);
         yKp_ = aic_control_y_.getAdaptiveEnvironmentStiffnessGainKp();
         yq_ = aic_control_y_.getQ();
-        yc_ = impedance_control_y_.impedanceFilter(force_meas_.wrench.force.y, force_torque_ref_.wrench.force.y, yr_);
+        yc_ = impedance_control_y_.impedanceFilter(force_meas_.wrench.force.y, force_torque_ref_.wrench.force.y, yd);
 
         zr_ = aic_control_z_.compute(force_meas_.wrench.force.z, force_torque_ref_.wrench.force.z, zd);
         zKp_ = aic_control_z_.getAdaptiveEnvironmentStiffnessGainKp();
         zq_ = aic_control_z_.getQ();
-        zc_ = impedance_control_z_.impedanceFilter(force_meas_.wrench.force.z, force_torque_ref_.wrench.force.z, zr_);
+        zc_ = impedance_control_z_.impedanceFilter(force_meas_.wrench.force.z, force_torque_ref_.wrench.force.z, zd);
 
 	};
 
@@ -724,12 +733,21 @@ int main(int argc, char **argv) {
 				// go trough states of impedance for update
                 int j = 0;
                 for (int i = 0; i < 3; i++) {
+
+					// output of adaptive part entering filter
+					// each is array of 3 [pos, vel, accel]
                 	state_msg.data[j++] = xr[i];
+
+					// ROS_INFO("Xr = %.2f", xr[i]);
                 	state_msg.data[j++] = yr[i];
                 	state_msg.data[j++] = zr[i];
+					// output of filter for position controller
+					// each is array of 3 [pos, vel, accel]
                 	state_msg.data[j++] = xc[i];
+					// ROS_INFO("Xc = %.2f", xc[i]);
                 	state_msg.data[j++] = yc[i];
                 	state_msg.data[j++] = zc[i];
+					// params of gains
                 	state_msg.data[j++] = xKp[i];
                     state_msg.data[j++] = yKp[i];
                     state_msg.data[j++] = zKp[i];
