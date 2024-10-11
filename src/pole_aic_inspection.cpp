@@ -92,7 +92,7 @@ public:
 	ImpedanceControlNode(int rate, bool simulation):
 		rate_(rate),
 		simulation_flag_(simulation),
-		force_msg_received_(false),
+		force_msg_received_(true),
 		trajectory_msg_received_(false),
 		pose_meas_received_(false),
 		impedance_start_flag_(false),
@@ -121,6 +121,7 @@ public:
 	    pose_ref_ = msg;
 	    vel_ref_ = geometry_msgs::Twist();
 	    acc_ref_ = geometry_msgs::Twist();
+		trajectory_msg_received_ = true;
 	};
 
 	//subscriber for status of carrot
@@ -134,35 +135,33 @@ public:
 		}
 	};
 
-	// main sub to trajectory
-	 void trajectoryRefCb(const trajectory_msgs::MultiDOFJointTrajectory &msg) {
-	 	if (msg.points.size() > 0)
-	 	{
-	 		pose_ref_.header = msg.header;
-	 		pose_ref_.pose.position.x = msg.points[0].transforms[0].translation.x;
-	 		pose_ref_.pose.position.y = msg.points[0].transforms[0].translation.y;
-	 		pose_ref_.pose.position.z = msg.points[0].transforms[0].translation.z;
-	 		pose_ref_.pose.orientation.x = msg.points[0].transforms[0].rotation.x;
-	 		pose_ref_.pose.orientation.y = msg.points[0].transforms[0].rotation.y;
-	 		pose_ref_.pose.orientation.z = msg.points[0].transforms[0].rotation.z;
-	 		pose_ref_.pose.orientation.w = msg.points[0].transforms[0].rotation.w;
-
-	 		vel_ref_.linear.x = msg.points[0].velocities[0].linear.x;
-	 		vel_ref_.linear.y = msg.points[0].velocities[0].linear.y;
-	 		vel_ref_.linear.z = msg.points[0].velocities[0].linear.z;
-	 		vel_ref_.angular.x = msg.points[0].velocities[0].angular.x;
-	 		vel_ref_.angular.y = msg.points[0].velocities[0].angular.y;
-	 		vel_ref_.angular.z = msg.points[0].velocities[0].angular.z;
-
-	 		acc_ref_.linear.x = msg.points[0].accelerations[0].linear.x;
-	 		acc_ref_.linear.y = msg.points[0].accelerations[0].linear.y;
-	 		acc_ref_.linear.z = msg.points[0].accelerations[0].linear.z;
-	 		acc_ref_.angular.x = msg.points[0].accelerations[0].angular.x;
-	 		acc_ref_.angular.y = msg.points[0].accelerations[0].angular.y;
-	 		acc_ref_.angular.z = msg.points[0].accelerations[0].angular.z;
-	 		
-	 	} 
-	 	
+	// array of trajectory points
+	void trajectoryRefCb(const trajectory_msgs::MultiDOFJointTrajectory &msg) {
+		if (msg.points.size() > 0)
+		{
+			pose_ref_.header = msg.header;
+			pose_ref_.pose.position.x = msg.points[0].transforms[0].translation.x;
+			pose_ref_.pose.position.y = msg.points[0].transforms[0].translation.y;
+			pose_ref_.pose.position.z = msg.points[0].transforms[0].translation.z;
+			pose_ref_.pose.orientation.x = msg.points[0].transforms[0].rotation.x;
+			pose_ref_.pose.orientation.y = msg.points[0].transforms[0].rotation.y;
+			pose_ref_.pose.orientation.z = msg.points[0].transforms[0].rotation.z;
+			pose_ref_.pose.orientation.w = msg.points[0].transforms[0].rotation.w;
+			vel_ref_.linear.x = msg.points[0].velocities[0].linear.x;
+			vel_ref_.linear.y = msg.points[0].velocities[0].linear.y;
+			vel_ref_.linear.z = msg.points[0].velocities[0].linear.z;
+			vel_ref_.angular.x = msg.points[0].velocities[0].angular.x;
+			vel_ref_.angular.y = msg.points[0].velocities[0].angular.y;
+			vel_ref_.angular.z = msg.points[0].velocities[0].angular.z;
+			acc_ref_.linear.x = msg.points[0].accelerations[0].linear.x;
+			acc_ref_.linear.y = msg.points[0].accelerations[0].linear.y;
+			acc_ref_.linear.z = msg.points[0].accelerations[0].linear.z;
+			acc_ref_.angular.x = msg.points[0].accelerations[0].angular.x;
+			acc_ref_.angular.y = msg.points[0].accelerations[0].angular.y;
+			acc_ref_.angular.z = msg.points[0].accelerations[0].angular.z;
+			
+		} 
+		
 	 	trajectory_msg_received_ = true;		
 
 	 	// ROS_INFO("************************");
@@ -172,7 +171,7 @@ public:
      	// ROS_INFO("************************");
 	 }
 
-	// point of trajectory to be removed, comes from before
+	// main sub to trajectory
 	void trajectoryPointRefCb(const trajectory_msgs::MultiDOFJointTrajectoryPoint &msg) {
 		pose_ref_.pose.position.x = msg.transforms[0].translation.x;
 		pose_ref_.pose.position.y = msg.transforms[0].translation.y;
@@ -182,21 +181,51 @@ public:
 		pose_ref_.pose.orientation.z = msg.transforms[0].rotation.z;
 		pose_ref_.pose.orientation.w = msg.transforms[0].rotation.w;
 
-		vel_ref_.linear.x = 0*msg.velocities[0].linear.x;
-		vel_ref_.linear.y = 0*msg.velocities[0].linear.y;
-		vel_ref_.linear.z = 0*msg.velocities[0].linear.z;
-		vel_ref_.angular.x =0* msg.velocities[0].angular.x;
-		vel_ref_.angular.y =0* msg.velocities[0].angular.y;
-		vel_ref_.angular.z =0* msg.velocities[0].angular.z;
-
-		acc_ref_.linear.x = 0*msg.accelerations[0].linear.x;
-		acc_ref_.linear.y = 0*msg.accelerations[0].linear.y;
-		acc_ref_.linear.z = 0*msg.accelerations[0].linear.z;
-		acc_ref_.angular.x =0* msg.accelerations[0].angular.x;
-		acc_ref_.angular.y =0* msg.accelerations[0].angular.y;
-		acc_ref_.angular.z =0* msg.accelerations[0].angular.z;
+		vel_ref_.linear.x = msg.velocities[0].linear.x;
+		vel_ref_.linear.y = msg.velocities[0].linear.y;
+		vel_ref_.linear.z = msg.velocities[0].linear.z;
+		vel_ref_.angular.x = msg.velocities[0].angular.x;
+		vel_ref_.angular.y = msg.velocities[0].angular.y;
+		vel_ref_.angular.z = msg.velocities[0].angular.z;
+	
+		acc_ref_.linear.x = msg.accelerations[0].linear.x;
+		acc_ref_.linear.y = msg.accelerations[0].linear.y;
+		acc_ref_.linear.z = msg.accelerations[0].linear.z;
+		acc_ref_.angular.x = msg.accelerations[0].angular.x;
+		acc_ref_.angular.y = msg.accelerations[0].angular.y;
+		acc_ref_.angular.z = msg.accelerations[0].angular.z;
 
 		trajectory_msg_received_ = true;
+
+	}
+
+	void carrotMeasOdomCb(const trajectory_msgs::MultiDOFJointTrajectoryPoint &msg) {
+
+		pose_meas_received_ = true;
+
+		pose_meas_.pose.position.x = msg.transforms[0].translation.x;
+		pose_meas_.pose.position.y = msg.transforms[0].translation.y;
+		pose_meas_.pose.position.z = msg.transforms[0].translation.z;
+		pose_meas_.pose.orientation.x = msg.transforms[0].rotation.x;
+		pose_meas_.pose.orientation.y = msg.transforms[0].rotation.y;
+		pose_meas_.pose.orientation.z = msg.transforms[0].rotation.z;
+		pose_meas_.pose.orientation.w = msg.transforms[0].rotation.w;
+
+		// rest of trajectory msg
+
+		// vel_meas_.linear.x = msg.velocities[0].linear.x;
+		// vel_meas_.linear.y = msg.velocities[0].linear.y;
+		// vel_meas_.linear.z = msg.velocities[0].linear.z;
+		// vel_meas_.angular.x = msg.velocities[0].angular.x;
+		// vel_meas_.angular.y = msg.velocities[0].angular.y;
+		// vel_meas_.angular.z = msg.velocities[0].angular.z;
+	
+		// acc_meas_.linear.x = msg.accelerations[0].linear.x;
+		// acc_meas_.linear.y = msg.accelerations[0].linear.y;
+		// acc_meas_.linear.z = msg.accelerations[0].linear.z;
+		// acc_meas_.angular.x = msg.accelerations[0].angular.x;
+		// acc_meas_.angular.y = msg.accelerations[0].angular.y;
+		// acc_meas_.angular.z = msg.accelerations[0].angular.z;
 
 	}
 
@@ -218,48 +247,110 @@ public:
 		pose_meas_ = msg;
 	};
 
-	// adaptation of aic params
+	// Adaptation of AIC and Impedance Control parameters
 	void reconfigureCb(impedance_control::ImpedanceControlConfig &config, uint32_t level) {
 
-		if (!reconfigure_start_) {
-			config.kp1_x = kp1_[0];
-			config.kp2_x = kp2_[0];
-			config.wp_x = wp_[0];
-			config.wd_x = wd_[0];
+	    if (!reconfigure_start_) {
+	        // Initial parameter setting for AIC and Impedance Control (X, Y, Z axes)
+	
+	        // AIC Parameters
+	        config.kp1_x = kp1_[0];
+	        config.kp2_x = kp2_[0];
+	        config.wp_x = wp_[0];
+	        config.wd_x = wd_[0];
+	
+	        config.kp1_y = kp1_[1];
+	        config.kp2_y = kp2_[1];
+	        config.wp_y = wp_[1];
+	        config.wd_y = wd_[1];
 
-			config.kp1_y = kp1_[1];
-			config.kp2_y = kp2_[1];
-			config.wp_y = wp_[1];
-			config.wd_y = wd_[1];
+	        config.kp1_z = kp1_[2];
+	        config.kp2_z = kp2_[2];
+	        config.wp_z = wp_[2];
+	        config.wd_z = wd_[2];
+	
+	        // Impedance Control Parameters
+	        // config.M_x = M_[0];
+	        // config.B_x = B_[0];
+	        // config.K_x = K_[0];
+	        // config.dead_zone_x = dead_zone_[0];
 
-			config.kp1_z = kp1_[2];
-			config.kp2_z = kp2_[2];
-			config.wp_z = wp_[2];
-			config.wd_z = wd_[2];
-			reconfigure_start_ = true;
-		}
-		else {
-			kp1_[0] = config.kp1_x;
-			kp2_[0] = config.kp2_x;
-			wp_[0] = config.wp_x;
-			wd_[0] = config.wd_x;
+	        // config.M_y = M_[1];
+	        // config.B_y = B_[1];
+	        // config.K_y = K_[1];
+	        // config.dead_zone_y = dead_zone_[1];
+ 
+	        // config.M_z = M_[2];
+	        // config.B_z = B_[2];
+	        // config.K_z = K_[2];
+	        // config.dead_zone_z = dead_zone_[2];
 
-			kp1_[1] = config.kp1_y;
-			kp2_[1] = config.kp2_y;
-			wp_[1] = config.wp_y;
-			wd_[1] = config.wd_y;
+	        reconfigure_start_ = true;
+	    } else {
+	        // Updating AIC and Impedance Control parameters based on dynamic reconfigure input
 
-			kp1_[2] = config.kp1_z;
-			kp2_[2] = config.kp2_z;
-			wp_[2] = config.wp_z;
-			wd_[2] = config.wd_z;
+	        // AIC Parameters
+	        kp1_[0] = config.kp1_x;
+	        kp2_[0] = config.kp2_x;
+	        wp_[0] = config.wp_x;
+	        wd_[0] = config.wd_x;
 
-			aic_control_x_.setAdaptiveParameters(kp1_[0], kp2_[0], wp_[0], wd_[0]);
-			aic_control_y_.setAdaptiveParameters(kp1_[1], kp2_[1], wp_[1], wd_[1]);
-			aic_control_z_.setAdaptiveParameters(kp1_[2], kp2_[2], wp_[2], wd_[2]);
+	        kp1_[1] = config.kp1_y;
+	        kp2_[1] = config.kp2_y;
+	        wp_[1] = config.wp_y;
+	        wd_[1] = config.wd_y;
 
-			initializeAdaptationLaws();
-		}	
+	        kp1_[2] = config.kp1_z;
+	        kp2_[2] = config.kp2_z;
+	        wp_[2] = config.wp_z;
+	        wd_[2] = config.wd_z;
+
+	        aic_control_x_.setAdaptiveParameters(kp1_[0], kp2_[0], wp_[0], wd_[0]);
+	        aic_control_y_.setAdaptiveParameters(kp1_[1], kp2_[1], wp_[1], wd_[1]);
+	        aic_control_z_.setAdaptiveParameters(kp1_[2], kp2_[2], wp_[2], wd_[2]);
+
+	        // Impedance Control Parameters
+	        // M_[0] = config.M_x;
+			// ROS_INFO("M_x = %.2f", M_[0]);
+	        // B_[0] = config.B_x;
+			// ROS_INFO("B_x = %.2f", B_[0]);
+	        // K_[0] = config.K_x;
+			// ROS_INFO("K_x = %.2f", B_[0]);
+	        // dead_zone_[0] = config.dead_zone_x;
+
+	        // M_[1] = config.M_y;
+			// ROS_INFO("M_y = %.2f", M_[1]);
+	        // B_[1] = config.B_y;
+			// ROS_INFO("B_y = %.2f", B_[1]);
+	        // K_[1] = config.K_y;
+			// ROS_INFO("K_y = %.2f", K_[1]);
+	        // dead_zone_[1] = config.dead_zone_y;
+
+	        // M_[2] = config.M_z;
+			// ROS_INFO("M_Z = %.2f", M_[2]);
+	        // B_[2] = config.B_z;
+			// ROS_INFO("B_z = %.2f", B_[2]);
+	        // K_[2] = config.K_z;
+			// ROS_INFO("K_z = %.2f", K_[2]);
+	        // dead_zone_[2] = config.dead_zone_z;
+
+	        impedance_control_x_.setImpedanceFilterMass(M_[0]);
+	        impedance_control_x_.setImpedanceFilterDamping(B_[0]);
+	        impedance_control_x_.setImpedanceFilterStiffness(K_[0]);
+	        impedance_control_x_.setDeadZone(dead_zone_[0]);
+
+	        impedance_control_y_.setImpedanceFilterMass(M_[1]);
+	        impedance_control_y_.setImpedanceFilterDamping(B_[1]);
+	        impedance_control_y_.setImpedanceFilterStiffness(K_[1]);
+	        impedance_control_y_.setDeadZone(dead_zone_[1]);
+
+	        impedance_control_z_.setImpedanceFilterMass(M_[2]);
+	        impedance_control_z_.setImpedanceFilterDamping(B_[2]);
+	        impedance_control_z_.setImpedanceFilterStiffness(K_[2]);
+	        impedance_control_z_.setDeadZone(dead_zone_[2]);
+
+	        initializeAdaptationLaws();
+	    }
 	};
 
 	std::string vectorToString(const std::vector<double>& vec) {
@@ -275,57 +366,91 @@ public:
     return ss.str();
 	}
 
-	// params set, initialize from imports
+	
+	// Load Impedance and AIC control parameters from a YAML file and update dynamic reconfigure
 	void loadImpedanceControlParameters(std::string file) {
-		YAML::Node config = YAML::LoadFile(file);
+    YAML::Node config = YAML::LoadFile(file);
 
-		M_ = config["IMPEDANCE_FILTER"]["M"].as<std::vector<double> >();
-    	B_ = config["IMPEDANCE_FILTER"]["B"].as<std::vector<double> >();
-    	K_ = config["IMPEDANCE_FILTER"]["K"].as<std::vector<double> >();
-    	dead_zone_ = config["IMPEDANCE_FILTER"]["dead_zone"].as<std::vector<double> >();
-    	kp1_ = config["AIC"]["INTEGRAL_ADAPTATION_GAINS"]["ke1"].as<std::vector<double> >();
-    	kp2_ = config["AIC"]["PROPORTIONAL_ADAPTATION_GAINS"]["ke2"].as<std::vector<double> >();
-    	kp0_ = config["AIC"]["INITIAL_GAINS"]["Ke"].as<std::vector<double> >();
-    	wp_ = config["AIC"]["WEIGHTING_FACTORS"]["Wp"].as<std::vector<double> >();
-		wd_ = config["AIC"]["WEIGHTING_FACTORS"]["Wd"].as<std::vector<double> >();
-    	
-		ROS_INFO_STREAM("IMPEDANCE_FILTER M: " << vectorToString(M_));
-		ROS_INFO_STREAM("IMPEDANCE_FILTER B: " << vectorToString(B_));
-		ROS_INFO_STREAM("IMPEDANCE_FILTER K: " << vectorToString(K_));
-		ROS_INFO_STREAM("IMPEDANCE_FILTER dead_zone: " << vectorToString(dead_zone_));
+	    // Load parameters from YAML
+	    M_ = config["IMPEDANCE_FILTER"]["M"].as<std::vector<double>>();
+	    B_ = config["IMPEDANCE_FILTER"]["B"].as<std::vector<double>>();
+	    K_ = config["IMPEDANCE_FILTER"]["K"].as<std::vector<double>>();
+	    dead_zone_ = config["IMPEDANCE_FILTER"]["dead_zone"].as<std::vector<double>>();
 
-		ROS_INFO_STREAM("AIC INTEGRAL_ADAPTATION_GAINS ke1: " << vectorToString(kp1_));
-		ROS_INFO_STREAM("AIC PROPORTIONAL_ADAPTATION_GAINS ke2: " << vectorToString(kp2_));
-		ROS_INFO_STREAM("AIC INITIAL_GAINS Ke: " << vectorToString(kp0_));
-		ROS_INFO_STREAM("AIC WEIGHTING_FACTORS Wp: " << vectorToString(wp_));
-		ROS_INFO_STREAM("AIC WEIGHTING_FACTORS Wd: " << vectorToString(wd_));
+	    kp1_ = config["AIC"]["INTEGRAL_ADAPTATION_GAINS"]["ke1"].as<std::vector<double>>();
+	    kp2_ = config["AIC"]["PROPORTIONAL_ADAPTATION_GAINS"]["ke2"].as<std::vector<double>>();
+	    kp0_ = config["AIC"]["INITIAL_GAINS"]["Ke"].as<std::vector<double>>();
+	    wp_ = config["AIC"]["WEIGHTING_FACTORS"]["Wp"].as<std::vector<double>>();
+	    wd_ = config["AIC"]["WEIGHTING_FACTORS"]["Wd"].as<std::vector<double>>();
 
-    	impedance_control_x_.setImpedanceFilterMass(M_[0]);
-    	impedance_control_x_.setImpedanceFilterDamping(B_[0]);
-    	impedance_control_x_.setImpedanceFilterStiffness(K_[0]);
-    	impedance_control_x_.setDeadZone(dead_zone_[0]);
-    	aic_control_x_.setImpedanceFilterParameters(M_[0], B_[0], K_[0]);
-		aic_control_x_.setAdaptiveParameters(kp1_[0], kp2_[0], wp_[0], wd_[0]);
-		aic_control_x_.setDeadZone(dead_zone_[0]);
+	    // Log loaded parameters
+	    ROS_INFO_STREAM("IMPEDANCE_FILTER M: " << vectorToString(M_));
+	    ROS_INFO_STREAM("IMPEDANCE_FILTER B: " << vectorToString(B_));
+	    ROS_INFO_STREAM("IMPEDANCE_FILTER K: " << vectorToString(K_));
+	    ROS_INFO_STREAM("IMPEDANCE_FILTER dead_zone: " << vectorToString(dead_zone_));
 
+	    ROS_INFO_STREAM("AIC INTEGRAL_ADAPTATION_GAINS ke1: " << vectorToString(kp1_));
+	    ROS_INFO_STREAM("AIC PROPORTIONAL_ADAPTATION_GAINS ke2: " << vectorToString(kp2_));
+	    ROS_INFO_STREAM("AIC INITIAL_GAINS Ke: " << vectorToString(kp0_));
+	    ROS_INFO_STREAM("AIC WEIGHTING_FACTORS Wp: " << vectorToString(wp_));
+	    ROS_INFO_STREAM("AIC WEIGHTING_FACTORS Wd: " << vectorToString(wd_));
 
-    	impedance_control_y_.setImpedanceFilterMass(M_[1]);
-    	impedance_control_y_.setImpedanceFilterDamping(B_[1]);
-    	impedance_control_y_.setImpedanceFilterStiffness(K_[1]);
-		impedance_control_y_.setDeadZone(dead_zone_[1]);
-		aic_control_y_.setImpedanceFilterParameters(M_[1], B_[1], K_[1]);
-		aic_control_y_.setAdaptiveParameters(kp1_[1], kp2_[1], wp_[1], wd_[1]);
-		aic_control_y_.setDeadZone(dead_zone_[1]);
+	    // Set parameters for each axis (X, Y, Z) in the control system
+	    impedance_control_x_.setImpedanceFilterMass(M_[0]);
+	    impedance_control_x_.setImpedanceFilterDamping(B_[0]);
+	    impedance_control_x_.setImpedanceFilterStiffness(K_[0]);
+	    impedance_control_x_.setDeadZone(dead_zone_[0]);
+	    aic_control_x_.setImpedanceFilterParameters(M_[0], B_[0], K_[0]);
+	    aic_control_x_.setAdaptiveParameters(kp1_[0], kp2_[0], wp_[0], wd_[0]);
 
+	    impedance_control_y_.setImpedanceFilterMass(M_[1]);
+	    impedance_control_y_.setImpedanceFilterDamping(B_[1]);
+	    impedance_control_y_.setImpedanceFilterStiffness(K_[1]);
+	    impedance_control_y_.setDeadZone(dead_zone_[1]);
+	    aic_control_y_.setImpedanceFilterParameters(M_[1], B_[1], K_[1]);
+	    aic_control_y_.setAdaptiveParameters(kp1_[1], kp2_[1], wp_[1], wd_[1]);
 
-    	impedance_control_z_.setImpedanceFilterMass(M_[2]);
-    	impedance_control_z_.setImpedanceFilterDamping(B_[2]);
-    	impedance_control_z_.setImpedanceFilterStiffness(K_[2]);
-		impedance_control_z_.setDeadZone(dead_zone_[2]);
-		aic_control_z_.setImpedanceFilterParameters(M_[2], B_[2], K_[2]);
-		aic_control_z_.setAdaptiveParameters(kp1_[2], kp2_[2], wp_[2], wd_[2]);
-		aic_control_z_.setDeadZone(dead_zone_[2]);
-	};
+	    impedance_control_z_.setImpedanceFilterMass(M_[2]);
+	    impedance_control_z_.setImpedanceFilterDamping(B_[2]);
+	    impedance_control_z_.setImpedanceFilterStiffness(K_[2]);
+	    impedance_control_z_.setDeadZone(dead_zone_[2]);
+	    aic_control_z_.setImpedanceFilterParameters(M_[2], B_[2], K_[2]);
+	    aic_control_z_.setAdaptiveParameters(kp1_[2], kp2_[2], wp_[2], wd_[2]);
+
+	    // Call the dynamic reconfigure callback to initialize dynamic reconfigure server with these parameters
+	    impedance_control::ImpedanceControlConfig dyn_config;
+	    dyn_config.kp1_x = kp1_[0];
+	    dyn_config.kp2_x = kp2_[0];
+	    dyn_config.wp_x = wp_[0];
+	    dyn_config.wd_x = wd_[0];
+	    dyn_config.kp1_y = kp1_[1];
+	    dyn_config.kp2_y = kp2_[1];
+	    dyn_config.wp_y = wp_[1];
+	    dyn_config.wd_y = wd_[1];
+	    dyn_config.kp1_z = kp1_[2];
+	    dyn_config.kp2_z = kp2_[2];
+	    dyn_config.wp_z = wp_[2];
+	    dyn_config.wd_z = wd_[2];
+
+	    // dyn_config.M_x = M_[0];
+	    // dyn_config.B_x = B_[0];
+	    // dyn_config.K_x = K_[0];
+	    // dyn_config.dead_zone_x = dead_zone_[0];
+
+	    // dyn_config.M_y = M_[1];
+		// dyn_config.B_y = B_[1];
+	    // dyn_config.K_y = K_[1];
+	    // dyn_config.dead_zone_y = dead_zone_[1];
+
+	    // dyn_config.M_z = M_[2];
+	    // dyn_config.B_z = B_[2];
+	    // dyn_config.K_z = K_[2];
+	    // dyn_config.dead_zone_z = dead_zone_[2];
+
+	    // Invoke the callback to sync dynamic reconfigure with the loaded YAML values
+	    reconfigureCb(dyn_config, 0);
+	}
+
 
 	// flag of measurements
 	bool isReady(void)
@@ -344,13 +469,17 @@ public:
 
 		// ROS_INFO("required data is %s", req.data ? "true" : "false");
         // ROS_INFO("isReady %s", isReady() ? "true" : "false");
-		ROS_INFO("trajectory is recived: %s", (trajectory_msg_received_ ) ? "true" : "false");
+		// ROS_INFO("trajectory is recived: %s", (trajectory_msg_received_ ) ? "true" : "false");
 
 	    if (req.data && isReady() && !impedance_start_flag_ && trajectory_msg_received_ && carrot_in_hold_mode_)
 	    {
-	        initial_values[0] = pose_meas_.pose.position.x;
+	        initial_values[0] = pose_meas_.pose.position.x; // tu ide carrot pozicija i orjentacije i sve
 	        initial_values[1] = pose_meas_.pose.position.y;
 	        initial_values[2] = pose_meas_.pose.position.z;
+
+			// ROS_INFO("new pose x is = %.2f", pose_ref_.pose.position.x);
+			// ROS_INFO("new pose y is = %.2f", pose_ref_.pose.position.y);
+			// ROS_INFO("new pose x is = %.2f", pose_ref_.pose.position.z);
 
 	        pose_ref_.pose.position.x = initial_values[0];
 	        pose_ref_.pose.position.y = initial_values[1];
@@ -585,7 +714,7 @@ int main(int argc, char **argv) {
 	ros::Subscriber carrot_State = n.subscribe("carrot/status", 1, &ImpedanceControlNode::carrotStatusCb, &impedance_control);
 
 	// remove -> comes from trajectorys next point
-		//ros::Subscriber pose_ref_ros_sub = n.subscribe("tracker/input_pose", 1, &ImpedanceControlNode::poseRefCb, &impedance_control);
+	//ros::Subscriber pose_ref_ros_sub = n.subscribe("tracker/input_pose", 1, &ImpedanceControlNode::poseRefCb, &impedance_control);
 
 	//  to be removede comes from previous trajectroy
 	// ros::Subscriber trajectory_ref_ros_sub = n.subscribe("position_hold/trajectory", 1, &ImpedanceControlNode::trajectoryRefCb, &impedance_control);
@@ -597,7 +726,8 @@ int main(int argc, char **argv) {
 	ros::Subscriber force_torque_ref_ros_sub = n.subscribe("force_reference", 1, &ImpedanceControlNode::forceTorqueRefCb, &impedance_control);
 
 	//sub to odometry -> can be removed and obtained from trajectory
-	ros::Subscriber pose_meas_odometry_sub = n.subscribe("odometry", 1, &ImpedanceControlNode::poseMeasOdomCb, &impedance_control);
+	// ros::Subscriber pose_meas_odometry_sub = n.subscribe("odometry", 1, &ImpedanceControlNode::poseMeasOdomCb, &impedance_control);
+	ros::Subscriber pose_meas_odometry_sub = n.subscribe("carrot/trajectory", 1, &ImpedanceControlNode::carrotMeasOdomCb, &impedance_control);
 
     // got from odeomtry before
 	// ros::Subscriber pose_meas_posestamped_sub = n.subscribe("impedance_control/pose_stamped_meas_input", 1, &ImpedanceControlNode::poseMeasPoseStampedCb, &impedance_control);
@@ -721,7 +851,8 @@ int main(int argc, char **argv) {
 				commanded_traj_point.velocities[0].linear.z = zc[1];
 				commanded_traj_point.accelerations[0].linear.x = xc[2];
 				commanded_traj_point.accelerations[0].linear.y = yc[2];
-				commanded_traj_point.accelerations[0].linear.y = zc[2];
+				commanded_traj_point.accelerations[0].linear.z = zc[2];
+				// ROS_INFO("accel: \n x: %.2f\n y: %.2f\n z: %.2f", xc[2], yc[2], zc[2]);
 				commanded_traj_point.transforms[0].rotation.x = qxc[0];
 				commanded_traj_point.transforms[0].rotation.y = qyc[0];
 				commanded_traj_point.transforms[0].rotation.z = qzc[0];
