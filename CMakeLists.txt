@@ -14,15 +14,17 @@ find_package(catkin REQUIRED COMPONENTS
     trajectory_msgs
 )
 
+find_package(Eigen3 REQUIRED)  # Add this line
+include_directories(${EIGEN3_INCLUDE_DIR})  # Add this line
+
 find_package(cmake_modules REQUIRED)
 
 generate_dynamic_reconfigure_options(
     config/impedance_control_params.cfg
-    )
+)
 
 add_message_files(
   FILES
-  #MRAIController.msg
   Modes.msg
 )
 
@@ -64,19 +66,15 @@ target_link_libraries(aic ${catkin_LIBRARIES} Tf1 Tf2 function)
 add_executable(impedance_control_node src/impedance_control_node.cpp)
 target_link_libraries(impedance_control_node ${catkin_LIBRARIES} yaml-cpp impedance_control aic)
 
-# Add main control for aic and trajectory mofication
 add_executable(pole_aic_inspection src/pole_aic_inspection.cpp)
 target_link_libraries(pole_aic_inspection ${catkin_LIBRARIES} yaml-cpp Tf2 impedance_control aic Tf1 median_filter)
 
-# Add the new force_reference_node executable
-add_executable(force_reference_node src/force_reference_node.cpp)
-target_link_libraries(force_reference_node ${catkin_LIBRARIES})
+add_executable(reference_node src/reference_node.cpp)
+target_link_libraries(reference_node ${catkin_LIBRARIES})
 
-# Add transformation from sensor frame to drone frame
 add_executable(sensor2drone_node src/sensor2drone_tf.cpp)
 target_link_libraries(sensor2drone_node ${catkin_LIBRARIES} yaml-cpp)
 
-# Add filter and output readings in drone frame
 add_executable(force_filter_node src/force_filter_node.cpp)
 target_link_libraries(force_filter_node ${catkin_LIBRARIES} yaml-cpp Tf1 median_filter)
 
