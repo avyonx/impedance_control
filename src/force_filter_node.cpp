@@ -392,8 +392,8 @@ int main(int argc, char **argv)
 
     private_node_handle_.param("rate", rate, int(1000));
     private_node_handle_.param("moving_average_sample_number", masn, int(10));
-    private_node_handle_.param("median_filter_size", mfs, int(21));
-    private_node_handle_.param("pt1_filter_time_constant", pt1_t, float(0.05));
+    private_node_handle_.param("median_filter_size", mfs, int(30));
+    private_node_handle_.param("pt1_filter_time_constant", pt1_t, float(0.1));
     private_node_handle_.param("invert_force_measurements", invert_meas, bool(false));
     private_node_handle_.param("force_roll_transform", t_roll, float(0.0));
     private_node_handle_.param("force_pitch_transform", t_pitch, float(0.0));
